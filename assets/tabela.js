@@ -8,7 +8,7 @@
 
   window.Aiker.carregarTudo().then(d => { dados = d; montar(); });
 
-  document.getElementById('gerar').addEventListener('click', () => window.print());
+  document.getElementById('gerar').addEventListener('click', async () => { await compactarFotos(); requestAnimationFrame(() => window.print()); });
   window.addEventListener('resize', ajustarZoom);
 
   // card no modelo da Proposta D: produto em destaque, preço un. + valor da caixa
@@ -125,6 +125,31 @@
     document.getElementById('folhas').innerHTML = folhas.join('');
     document.title = `${nov ? 'Novidades' : 'Tabela'} Aiker ${hoje.replace(/\//g, '-')}`;
     ajustarZoom();
+    // PDF salvo pelo sistema na pasta da atualização: já deixa as fotos leves antes de imprimir
+    if (/[?&](arquivo=1|previaServidor=)/.test(location.search)) compactarFotos();
+  }
+
+  // O navegador grava fotos WebP/PNG no PDF sem compressão (a tabela passava de 30 MB).
+  // Antes de imprimir, cada foto vira um JPEG do tamanho que aparece na folha: o PDF fica com poucos MB.
+  let compactando = null;
+  function compactarFotos() {
+    if (compactando) return compactando;
+    const imgs = [...document.querySelectorAll('#folhas .d-img img, #folhas .ind-foto img, #folhas .c-img img, #folhas .folha-img img')];
+    const carregou = i => (i.complete ? Promise.resolve() : new Promise(ok => { i.addEventListener('load', ok, { once: true }); i.addEventListener('error', ok, { once: true }); }));
+    compactando = Promise.all(imgs.map(carregou)).then(() => Promise.all(imgs.map(i => {
+      if (!i.naturalWidth || /^data:/.test(i.src)) return null;
+      const capa = !!i.closest('.folha-img');
+      const max = capa ? 1750 : 720; // capa: A4 a 200 dpi · produto: ~300 dpi no tamanho do card
+      const k = Math.min(1, max / Math.max(i.naturalWidth, i.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(i.naturalWidth * k); c.height = Math.round(i.naturalHeight * k);
+      const x = c.getContext('2d');
+      x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+      x.drawImage(i, 0, 0, c.width, c.height);
+      try { i.src = c.toDataURL('image/jpeg', capa ? 0.86 : 0.85); } catch (e) { return null; }
+      return carregou(i);
+    })));
+    return compactando;
   }
 
   // na tela do celular, reduz as folhas para caber na largura
