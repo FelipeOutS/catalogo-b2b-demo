@@ -22,8 +22,10 @@
   }
 
   // ================= util =================
+  // o aviso fica guardado aqui: se ele estiver dentro de uma janela que é redesenhada, é só colocá-lo de volta
+  const toastEl = document.getElementById('toast');
   function toast(t, erro) {
-    const el = $('#toast');
+    const el = toastEl;
     (document.querySelector('dialog[open]') || document.body).appendChild(el);
     el.textContent = t; el.className = 'toast on' + (erro ? ' erro' : '');
     clearTimeout(toast.t); toast.t = setTimeout(() => { el.className = 'toast'; }, erro ? 4000 : 2400);
@@ -80,7 +82,7 @@
 
   // ================= produtos =================
   ['#busca', '#fCat'].forEach(s => $(s).addEventListener('input', desenharProdutos));
-  document.addEventListener('keydown', e => { if (e.key === '/' && !e.target.matches('input, textarea, select')) { e.preventDefault(); $('#busca').focus(); } });
+  document.addEventListener('keydown', e => { if (e.key === '/' && !(e.target.matches && e.target.matches('input, textarea, select'))) { e.preventDefault(); $('#busca').focus(); } });
 
   function desenharProdutos() {
     const termos = norm($('#busca').value).split(' ').filter(Boolean);

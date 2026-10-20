@@ -21,8 +21,10 @@
   };
   const fmt = n => (n == null || n === '' || isNaN(n) ? '' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const brl = A.brl;
+  // o aviso fica guardado aqui: se ele estiver dentro de uma janela que é redesenhada, é só colocá-lo de volta
+  const toastEl = document.getElementById('toast');
   function toast(t, erro) {
-    const el = $('#toast');
+    const el = toastEl;
     (document.querySelector('dialog[open]') || document.body).appendChild(el);
     el.textContent = t;
     el.className = 'toast on' + (erro ? ' erro' : '');
@@ -1213,7 +1215,7 @@
   }
   $('#btnDesfazer').addEventListener('click', desfazer);
   document.addEventListener('keydown', e => {
-    const emCampo = e.target.matches('input, textarea, select');
+    const emCampo = !!(e.target.matches && e.target.matches('input, textarea, select, [contenteditable="true"]'));
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !emCampo && !document.querySelector('dialog[open]')) { e.preventDefault(); desfazer(); }
     if (e.key === '/' && !emCampo && !$('#aba-produtos').hidden) { e.preventDefault(); $('#fBusca').focus(); }
   });

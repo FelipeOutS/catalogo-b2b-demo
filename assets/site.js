@@ -612,8 +612,9 @@
 
   // ================= aviso =================
   let tAviso;
+  const avisoEl = document.getElementById('toast'); // guardado: sobrevive se a janela em que estava for redesenhada
   function aviso(t) {
-    const a = $('#toast');
+    const a = avisoEl;
     (document.querySelector('dialog[open]') || document.body).appendChild(a);
     a.textContent = t;
     a.classList.add('on');
