@@ -1025,3 +1025,4 @@ body.dens-compacta .tabela .nome small { display: none; }
   .ini-capas { height: 124px; }
   .ini-atalhos-faixa { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+.erro-txt { color: var(--vermelho); }

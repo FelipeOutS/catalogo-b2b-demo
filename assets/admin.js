@@ -202,6 +202,7 @@
     carregarUsuariosPainel();
     mostrarQuem();
     contarLixeira();
+    carregarBackupAuto().then(desenharInicio);
     requestAnimationFrame(() => moverIndicador(true));
     if (!$('#aba-inicio').hidden) contarNumeros();
     if (!E.produtos.length) oferecerCatalogoInicial();
@@ -277,7 +278,8 @@
     const visiveis = P.filter(p => p.ativo !== false && !p.esgotado).length;
     const pend = E.mudou.size;
     const ultBackup = guarda.ler('aiker-ultimo-backup');
-    const diasBackup = (() => {
+    const autoEmDia = E.backupAuto && E.backupAuto.ativo && E.backupAuto.ultimo && !E.backupAuto.erro;
+    const diasBackup = autoEmDia ? 0 : (() => {
       if (!ultBackup) return Infinity;
       const m = ultBackup.match(/(\d{2})\/(\d{2})\/(\d{4})/);
       return m ? (Date.now() - new Date(+m[3], +m[2] - 1, +m[1])) / 864e5 : Infinity;
@@ -2603,6 +2605,26 @@ ${urlCatalogo()}`;
     };
   }
   $('#btnVersoes').addEventListener('click', abrirVersoes);
+
+  // ================= backup automático (feito pelo servidor uma vez por dia) =================
+  E.backupAuto = null;
+  function mostrarBackupAuto(c) {
+    E.backupAuto = c;
+    $('#baAtivo').checked = !!c.ativo;
+    $('#baPasta').value = c.pasta || '';
+    $('#baStatus').textContent = c.erro ? 'Problema no último backup automático: ' + c.erro
+      : c.ativo ? (c.ultimo ? `Último backup automático: ${c.ultimo}.` : 'Ligado. O primeiro backup automático é feito hoje.')
+      : 'Desligado. Lembre de baixar o backup de vez em quando.';
+    $('#baStatus').classList.toggle('erro-txt', !!c.erro);
+  }
+  async function carregarBackupAuto() { try { mostrarBackupAuto(await api('backupAuto')); } catch (e) { /* servidor antigo */ } }
+  $('#baSalvar').addEventListener('click', async () => {
+    const b = $('#baSalvar'); b.disabled = true; b.textContent = 'Gravando…';
+    try { const c = await api('backupAutoSalvar', { ativo: $('#baAtivo').checked, pasta: $('#baPasta').value }); mostrarBackupAuto(c); toast(c.ativo ? 'Backup gravado em ' + c.pasta : 'Backup automático desligado'); }
+    catch (e) { toast(e.message, true); }
+    b.disabled = false; b.textContent = 'Salvar e fazer um agora';
+    desenharInicio();
+  });
 
   // ================= cópia de segurança =================
   $('#btnBackup').addEventListener('click', async () => {

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
+import os from 'node:os';
 
 const raiz = path.dirname(fileURLToPath(import.meta.url));
 const porta = Number(process.env.PORT) || 5173;
@@ -132,6 +133,36 @@ function montarBackup() {
   const fotos = {};
   for (const f of fs.readdirSync(FOTOS)) fotos[f] = fs.readFileSync(path.join(FOTOS, f)).toString('base64');
   return { tipo: 'backup-catalogo-aiker', versao: 1, geradoEm: agora(), rascunho: rascunho(), publicado: publicado(), acessos: acessos(), admins: admins(), propostas: ler('propostas') || [], lixeira: ler('lixeira') || [], historico: ler('historico') || {}, fotos };
+}
+
+// ---- backup automático: uma cópia completa por dia numa pasta (de preferência sincronizada com a nuvem) ----
+function cfgBackupAuto() {
+  let c = ler('backup-auto');
+  if (!c) {
+    const nuvem = process.env.OneDrive || path.join(os.homedir(), 'OneDrive');
+    // instalação nova: começa desligado (sugere a pasta do OneDrive); liga em Configurações → Backup automático
+    c = { ativo: false, pasta: path.join(nuvem, 'Backup Catálogo Aiker'), ultimo: '', arquivo: '', erro: '' };
+    gravar('backup-auto', c);
+  }
+  return c;
+}
+function backupAutomatico(forcar) {
+  const c = cfgBackupAuto();
+  if (!c.ativo && !forcar) return c;
+  try {
+    fs.mkdirSync(c.pasta, { recursive: true });
+    const d = new Date(); const z = n => String(n).padStart(2, '0');
+    const alvo = path.join(c.pasta, `backup-catalogo-aiker-${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}.json`);
+    if (forcar || !fs.existsSync(alvo)) {
+      fs.writeFileSync(alvo, JSON.stringify(montarBackup()));
+      c.ultimo = agora(); c.arquivo = alvo;
+    }
+    // guarda os 30 dias mais recentes
+    fs.readdirSync(c.pasta).filter(f => /^backup-catalogo-aiker-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(0, -30).forEach(f => fs.rmSync(path.join(c.pasta, f)));
+    c.erro = '';
+  } catch (e) { c.erro = e.message; }
+  gravar('backup-auto', c);
+  return c;
 }
 
 function pendente(r, p) {
@@ -299,6 +330,18 @@ function api(req, corpo) {
       });
       return { ok: true, tamanhos };
     }
+    case 'backupAuto': return { ok: true, ...cfgBackupAuto(), pastaExiste: fs.existsSync(cfgBackupAuto().pasta) };
+    case 'backupAutoSalvar': {
+      const c = cfgBackupAuto();
+      const pasta = String(d.pasta || '').trim();
+      if (d.ativo && !path.isAbsolute(pasta)) return { ok: false, erro: 'Informe a pasta completa, por exemplo C:\\Users\\Voce\\OneDrive\\Backup Catálogo Aiker.' };
+      const anterior = { ...c };
+      Object.assign(c, { ativo: !!d.ativo, pasta: pasta || c.pasta });
+      gravar('backup-auto', c);
+      const fim = c.ativo ? backupAutomatico(true) : c;
+      if (fim.erro) { const erro = fim.erro; gravar('backup-auto', anterior); return { ok: false, erro: 'Não consegui gravar nessa pasta (continua a anterior): ' + erro }; }
+      return { ok: true, ...fim };
+    }
     case 'backup':
       return { ok: true, backup: montarBackup() };
     case 'restaurar': {
@@ -356,4 +399,8 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': tipos[path.extname(caminho).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(dados);
   });
-}).listen(porta, () => console.log(`Catálogo: http://localhost:${porta}  ·  Admin: http://localhost:${porta}/admin  (senha de teste: ${SENHA})`));
+}).listen(porta, () => {
+  backupAutomatico(false); // ao ligar e depois de hora em hora (só grava uma vez por dia)
+  setInterval(() => backupAutomatico(false), 60 * 60 * 1000);
+  console.log(`Catálogo: http://localhost:${porta}  ·  Admin: http://localhost:${porta}/admin  (senha de teste: ${SENHA})`);
+});
