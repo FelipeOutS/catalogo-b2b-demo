@@ -119,6 +119,10 @@
   // Com CFG.api preenchido, lê o catálogo PUBLICADO pelo admin. Sem ele (ou se falhar), usa a cópia local.
   async function buscarCatalogo() {
     // prévia do admin: tabela gerada com o rascunho atual (inclui o que ainda não foi publicado)
+    const ps = (location.search.match(/[?&]previaServidor=([\w-]+)/) || [])[1];
+    if (ps && CFG.api) {
+      try { const j = await (await fetch(CFG.api + '?acao=previaArquivo&id=' + ps, { cache: 'no-store' })).json(); if (j.ok && Array.isArray(j.produtos)) return { dados: j, origem: 'previa' }; } catch (e) { /* segue */ }
+    }
     if (/[?&]previa=1/.test(location.search)) {
       try { const p = JSON.parse(localStorage.getItem('aiker-previa') || 'null'); if (p && Array.isArray(p.produtos)) return { dados: p, origem: 'previa' }; } catch (e) {}
     }

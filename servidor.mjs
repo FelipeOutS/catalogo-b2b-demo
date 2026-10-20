@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 import os from 'node:os';
+import { spawn } from 'node:child_process';
 
 const raiz = path.dirname(fileURLToPath(import.meta.url));
 const porta = Number(process.env.PORT) || 5173;
@@ -165,6 +166,52 @@ function backupAutomatico(forcar) {
   return c;
 }
 
+// ---- pasta da atualização: a cada publicação, salva tabela, novidades, planilha e backup numa pasta com a data ----
+const MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+function cfgArquivo() {
+  let c = ler('pasta-atualizacao');
+  if (!c) { const base = 'D:\\IKANOO'; c = { ativo: fs.existsSync(base), base, ultimo: '', pasta: '', arquivos: [], erro: '' }; gravar('pasta-atualizacao', c); }
+  return c;
+}
+function pastaDoDia(base, d = new Date()) {
+  const z = n => String(n).padStart(2, '0');
+  return { pasta: path.join(base, String(d.getFullYear()), 'TABELA-DE-PRODUTOS', MESES[d.getMonth()], `${z(d.getDate())}-${z(d.getMonth() + 1)}`, 'AIKER'), prefixo: `${z(d.getDate())}-${z(d.getMonth() + 1)}`, ano: d.getFullYear() };
+}
+const NAVEGADORES = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'];
+// imprime uma página do próprio sistema em PDF, com o navegador do computador sem janela
+function imprimirPdf(url, destino) {
+  return new Promise((ok, falha) => {
+    const nav = NAVEGADORES.find(f => fs.existsSync(f));
+    if (!nav) return falha(new Error('não encontrei o Edge ou o Chrome para gerar o PDF'));
+    const perfil = path.join(os.tmpdir(), 'catalogo-aiker-pdf-' + process.pid);
+    const p = spawn(nav, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-pdf-header-footer', '--run-all-compositor-stages-before-draw', '--virtual-time-budget=45000', '--user-data-dir=' + perfil, '--print-to-pdf=' + destino, url], { windowsHide: true, stdio: 'ignore' });
+    const limite = setTimeout(() => { p.kill(); falha(new Error('o navegador demorou demais para gerar o PDF')); }, 180000);
+    p.on('exit', () => { clearTimeout(limite); fs.existsSync(destino) && fs.statSync(destino).size > 1000 ? ok() : falha(new Error('o PDF não foi gerado')); });
+    p.on('error', e => { clearTimeout(limite); falha(e); });
+  });
+}
+async function arquivarAtualizacao(d, quem) {
+  const c = cfgArquivo();
+  const { pasta, prefixo, ano } = pastaDoDia(c.base);
+  fs.mkdirSync(pasta, { recursive: true });
+  const nome = tipo => path.join(pasta, `${prefixo}-${tipo}_AIKER_${ano}`);
+  const feitos = [], erros = [];
+  const tentar = async (rotulo, fn) => { try { await fn(); feitos.push(rotulo); } catch (e) { erros.push(rotulo + ': ' + e.message); } };
+  await tentar(path.basename(nome('TABELA')) + '.pdf', () => imprimirPdf(`http://localhost:${porta}/tabela.html?arquivo=1`, nome('TABELA') + '.pdf'));
+  if (d.novidades && Array.isArray(d.novidades.produtos) && d.novidades.produtos.length) {
+    const id = 'novidades-' + Date.now();
+    fs.mkdirSync(path.join(DIR, 'previas'), { recursive: true });
+    fs.writeFileSync(path.join(DIR, 'previas', id + '.json'), JSON.stringify(d.novidades));
+    await tentar(path.basename(nome('NOVIDADES')) + '.pdf', () => imprimirPdf(`http://localhost:${porta}/tabela.html?previaServidor=${id}`, nome('NOVIDADES') + '.pdf'));
+    fs.rmSync(path.join(DIR, 'previas', id + '.json'), { force: true });
+  }
+  if (d.xlsx) await tentar(path.basename(nome('PRODUTOS')) + '.xlsx', () => fs.writeFileSync(nome('PRODUTOS') + '.xlsx', Buffer.from(String(d.xlsx), 'base64')));
+  await tentar(path.basename(nome('BACKUP')) + '.json', () => fs.writeFileSync(nome('BACKUP') + '.json', JSON.stringify(montarBackup())));
+  Object.assign(c, { ultimo: agora(), pasta, arquivos: feitos, erro: erros.join(' · '), por: quem.nome });
+  gravar('pasta-atualizacao', c);
+  return c;
+}
+
 function pendente(r, p) {
   // compara com o que a publicação geraria (esgotados anônimos, sem a base das novidades)
   const { novidadesBase, ...cfg } = r.config || {};
@@ -175,6 +222,11 @@ function pendente(r, p) {
 function api(req, corpo) {
   const url = new URL(req.url, 'http://x');
   if (req.method === 'GET') {
+    if (url.searchParams.get('acao') === 'previaArquivo') {
+      const f = path.join(DIR, 'previas', path.basename(String(url.searchParams.get('id') || '')) + '.json');
+      if (!fs.existsSync(f)) return { ok: false, erro: 'Prévia não encontrada' };
+      return { ok: true, ...JSON.parse(fs.readFileSync(f, 'utf8')) };
+    }
     if (url.searchParams.get('acao') === 'catalogo') {
       const p = publicado();
       return { ok: true, produtos: p.produtos, config: p.config, vendedores: p.vendedores, publicadoEm: p.publicadoEm };
@@ -330,6 +382,19 @@ function api(req, corpo) {
       });
       return { ok: true, tamanhos };
     }
+    case 'pastaAtualizacao': { const c = cfgArquivo(); return { ok: true, ...c, previa: pastaDoDia(c.base).pasta, baseExiste: fs.existsSync(c.base) }; }
+    case 'pastaAtualizacaoSalvar': {
+      const c = cfgArquivo(); const base = String(d.base || '').trim();
+      if (d.ativo && !path.isAbsolute(base)) return { ok: false, erro: 'Informe a pasta completa, por exemplo D:\\IKANOO.' };
+      if (d.ativo && !fs.existsSync(base)) return { ok: false, erro: 'Essa pasta não existe neste computador: ' + base };
+      Object.assign(c, { ativo: !!d.ativo, base: base || c.base }); gravar('pasta-atualizacao', c);
+      return { ok: true, ...c, previa: pastaDoDia(c.base).pasta, baseExiste: true };
+    }
+    case 'abrirPastaAtualizacao': {
+      const c = cfgArquivo(); const alvo = c.pasta && fs.existsSync(c.pasta) ? c.pasta : c.base;
+      spawn('explorer.exe', [alvo], { detached: true, stdio: 'ignore' }).unref();
+      return { ok: true };
+    }
     case 'backupAuto': return { ok: true, ...cfgBackupAuto(), pastaExiste: fs.existsSync(cfgBackupAuto().pasta) };
     case 'backupAutoSalvar': {
       const c = cfgBackupAuto();
@@ -382,9 +447,16 @@ http.createServer((req, res) => {
   if (p === '/api') {
     let corpo = '';
     req.on('data', c => { corpo += c; if (corpo.length > 300e6) req.destroy(); });
-    req.on('end', () => {
+    req.on('end', async () => {
       let saida;
-      try { saida = api(req, corpo); } catch (e) { saida = { ok: false, erro: e.message }; }
+      try {
+        let d = {}; try { d = JSON.parse(corpo || '{}'); } catch (e) { /* api() responde */ }
+        // arquivar a atualização (gera PDFs): é demorado, então roda à parte
+        if (d.acao === 'arquivarAtualizacao') {
+          const quem = autenticar(d);
+          saida = !quem ? { ok: false, erro: 'senha' } : !cfgArquivo().ativo ? { ok: false, erro: 'A pasta da atualização está desligada em Configurações.' } : { ok: true, ...(await arquivarAtualizacao(d, quem)) };
+        } else saida = api(req, corpo);
+      } catch (e) { saida = { ok: false, erro: e.message }; }
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(saida));
     });

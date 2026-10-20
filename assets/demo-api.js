@@ -182,6 +182,9 @@
         if (!d.novaSenha || String(d.novaSenha).length < 4) return { ok: false, erro: 'A nova senha precisa ter pelo menos 4 caracteres.' };
         if (!quem.principal) { const l = admins(); const a = l.find(x => x.id === quem.id); a.senha = String(d.novaSenha); gravar('admins', l); return { ok: true }; }
         gravar('senha', String(d.novaSenha)); return { ok: true };
+      case 'pastaAtualizacao': return { ok: true, ativo: false, base: 'D:\\IKANOO', arquivos: [], previa: '' };
+      case 'pastaAtualizacaoSalvar':
+      case 'abrirPastaAtualizacao': return { ok: false, erro: 'Na demonstração não há pasta no computador.' };
       default: return { ok: false, erro: 'Ação desconhecida' };
     }
   }

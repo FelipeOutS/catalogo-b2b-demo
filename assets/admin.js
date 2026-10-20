@@ -203,6 +203,7 @@
     mostrarQuem();
     contarLixeira();
     carregarBackupAuto().then(desenharInicio);
+    carregarPastaAtu();
     requestAnimationFrame(() => moverIndicador(true));
     if (!$('#aba-inicio').hidden) contarNumeros();
     if (!E.produtos.length) oferecerCatalogoInicial();
@@ -2230,23 +2231,26 @@
     return '';
   }
   const COLS = ['CODIGO', 'CATEGORIA', 'NOME', 'PRECO', 'PRECO PROMO', 'PROMO INICIO', 'PROMO FIM', 'PCS/CX', 'ESGOTADO', 'ESTOQUE', 'ATIVO', 'DESTAQUE'];
-  $('#btnExportar').addEventListener('click', async () => {
-    try {
-      await carregarScript(XLSX_URL);
+  function montarPlanilha(semPreco) {
       const cab = [...COLS, ...Array.from({ length: MAX_SPECS }, (_, k) => 'ESPEC ' + (k + 1)), ...Array.from({ length: MAX_FOTOS }, (_, k) => 'FOTO ' + (k + 1))];
       const linhas = E.produtos.map(p => [
         p.codigo, p.categoria, p.nome, p.preco ?? '', p.promo ?? '', dataBR(p.promoDe), dataBR(p.promoAte), p.pcs ?? '', p.esgotado ? 'SIM' : 'NÃO', p.estoque ?? '', p.ativo === false ? 'NÃO' : 'SIM', p.destaque ? 'SIM' : 'NÃO',
         ...Array.from({ length: MAX_SPECS }, (_, k) => (p.specs || [])[k] || ''), ...Array.from({ length: MAX_FOTOS }, (_, k) => (p.fotos || [])[k] || ''),
       ]);
       // "sem preços": tira as colunas de valor (se a planilha voltar, os preços do painel não mudam)
-      const semPreco = $('#expSemPreco').checked;
       const fica = cab.map((h, k) => (semPreco && /^(PRECO|PRECO PROMO|PROMO INICIO|PROMO FIM)$/.test(h) ? -1 : k)).filter(k => k >= 0);
       const cab2 = fica.map(k => cab[k]);
       const ws = XLSX.utils.aoa_to_sheet([cab2, ...linhas.map(l => fica.map(k => l[k]))]);
       ws['!cols'] = cab2.map(h => ({ wch: h === 'NOME' ? 42 : h.startsWith('ESPEC') ? 34 : h.startsWith('FOTO') ? 24 : h === 'CATEGORIA' ? 26 : 12 }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'PRODUTOS');
-      XLSX.writeFile(wb, `catalogo-aiker-${semPreco ? 'sem-precos-' : ''}${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`);
+      return wb;
+  }
+  $('#btnExportar').addEventListener('click', async () => {
+    try {
+      await carregarScript(XLSX_URL);
+      const semPreco = $('#expSemPreco').checked;
+      XLSX.writeFile(montarPlanilha(semPreco), `catalogo-aiker-${semPreco ? 'sem-precos-' : ''}${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`);
     } catch (e) { toast(e.message, true); }
   });
 
@@ -2626,6 +2630,46 @@ ${urlCatalogo()}`;
     desenharInicio();
   });
 
+  // ================= pasta da atualização (criada a cada Publicar) =================
+  E.pastaAtu = null;
+  function mostrarPastaAtu(c) {
+    E.pastaAtu = c;
+    $('#paAtivo').checked = !!c.ativo;
+    $('#paBase').value = c.base || '';
+    $('#paPrevia').innerHTML = c.previa ? 'Hoje fica em <code>' + esc(c.previa) + '</code>' : '';
+    $('#paStatus').textContent = c.erro ? 'Última vez, faltou: ' + c.erro
+      : c.ultimo ? `Última pasta criada em ${c.ultimo}, com ${(c.arquivos || []).length} arquivos.`
+      : c.ativo ? 'Ligado. A pasta é criada na próxima vez que você publicar.' : 'Desligado.';
+    $('#paStatus').classList.toggle('erro-txt', !!c.erro);
+  }
+  async function carregarPastaAtu() { try { mostrarPastaAtu(await api('pastaAtualizacao')); } catch (e) { /* servidor antigo */ } }
+  $('#paSalvar').addEventListener('click', async () => {
+    const b = $('#paSalvar'); b.disabled = true;
+    try { mostrarPastaAtu(await api('pastaAtualizacaoSalvar', { ativo: $('#paAtivo').checked, base: $('#paBase').value })); toast($('#paAtivo').checked ? 'Pronto: ao publicar, a pasta do dia é criada' : 'Pasta da atualização desligada'); }
+    catch (e) { toast(e.message, true); }
+    b.disabled = false;
+  });
+  $('#paAbrir').addEventListener('click', () => api('abrirPastaAtualizacao').catch(e => toast(e.message, true)));
+
+  // a tabela de novidades do dia compara com a base de antes da 1ª publicação do dia;
+  // depois de arquivar, a base passa a ser a tabela publicada (a próxima atualização mostra só o que mudar dali em diante)
+  async function arquivarAtualizacao() {
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    let base = await baseNovidades();
+    if (base.auto && base.data === hoje && base.anterior) base = base.anterior;
+    const nov = calcularNovidades(base);
+    const atualizadoEm = new Date().toLocaleString('pt-BR');
+    const novidades = nov.length ? { produtos: nov, config: Object.assign({}, E.config, { novidadesBase: null, atualizadoEm, modoNovidades: true, novidadesDesde: base.data }), vendedores: [] } : null;
+    let xlsx = '';
+    try { await carregarScript(XLSX_URL); xlsx = XLSX.write(montarPlanilha(false), { type: 'base64', bookType: 'xlsx' }); } catch (e) { /* segue sem a planilha */ }
+    const c = await api('arquivarAtualizacao', { novidades, xlsx });
+    const { anterior, ...semAnterior } = base;
+    E.config.novidadesBase = Object.assign(fotografar(E.produtos), { auto: true, anterior: semAnterior });
+    alterado([]);
+    mostrarPastaAtu(Object.assign({}, E.pastaAtu, c));
+    return { c, nov: nov.length };
+  }
+
   // ================= cópia de segurança =================
   $('#btnBackup').addEventListener('click', async () => {
     const b = $('#btnBackup'); b.disabled = true; b.textContent = 'Preparando…';
@@ -2774,9 +2818,21 @@ ${urlCatalogo()}`;
         const m2 = modal(`<div class="selo-ok">${ICO_OK}</div><h2>Catálogo publicado</h2>
           <p>Publicado em ${esc(r.publicadoEm)}. O link do catálogo já mostra esta versão.</p>
           <textarea rows="5" readonly>${esc($('#msgGrupo').value)}</textarea>
+          ${E.pastaAtu && E.pastaAtu.ativo ? '<p class="pasta-atu" data-pa><span class="girando"></span> Salvando a tabela, as novidades, a planilha e o backup na pasta do dia…</p>' : ''}
           <div class="acoes"><button class="btn btn-claro" type="button" data-n>Fechar</button><button class="btn btn-escuro" type="button" data-s>Copiar mensagem para o grupo</button></div>`);
         $('[data-n]', m2).onclick = () => m2.close();
         $('[data-s]', m2).onclick = async () => { toast(await copiar($('#msgGrupo').value) ? 'Mensagem copiada' : 'Não foi possível copiar'); };
+        const pa = $('[data-pa]', m2);
+        if (pa) {
+          arquivarAtualizacao().then(({ c, nov }) => {
+            pa.innerHTML = `<b>${c.erro ? 'Pasta do dia criada, mas faltou algo' : 'Arquivos salvos na pasta do dia'}</b><code>${esc(c.pasta)}</code>`
+              + `<span>${(c.arquivos || []).map(esc).join(' · ')}${nov ? '' : ' · sem novidades hoje, então não há PDF de novidades'}</span>`
+              + (c.erro ? `<span class="erro-txt">${esc(c.erro)}</span>` : '')
+              + '<button class="btn btn-claro" type="button" data-abrir>Abrir pasta</button>';
+            pa.classList.toggle('com-erro', !!c.erro);
+            $('[data-abrir]', pa).onclick = () => api('abrirPastaAtualizacao').catch(e => toast(e.message, true));
+          }).catch(e => { pa.classList.add('com-erro'); pa.textContent = 'Não foi possível criar a pasta do dia: ' + e.message; });
+        }
       } catch (e) {
         m.close();
         toast('Não foi possível publicar: ' + e.message, true);
