@@ -194,7 +194,11 @@ async function arquivarAtualizacao(d, quem) {
   const c = cfgArquivo();
   const { pasta, prefixo, ano } = pastaDoDia(c.base);
   fs.mkdirSync(pasta, { recursive: true });
-  const nome = tipo => path.join(pasta, `${prefixo}-${tipo}_AIKER_${ano}`);
+  // publicou de novo no mesmo dia: não apaga a anterior, os arquivos novos ganham _V2, _V3…
+  const ja = fs.readdirSync(pasta);
+  let v = 1;
+  while (ja.some(f => f.startsWith(`${prefixo}-TABELA_AIKER_${ano}${v === 1 ? '' : '_V' + v}.`) || f.startsWith(`${prefixo}-BACKUP_AIKER_${ano}${v === 1 ? '' : '_V' + v}.`))) v++;
+  const nome = tipo => path.join(pasta, `${prefixo}-${tipo}_AIKER_${ano}${v === 1 ? '' : '_V' + v}`);
   const feitos = [], erros = [];
   const tentar = async (rotulo, fn) => { try { await fn(); feitos.push(rotulo); } catch (e) { erros.push(rotulo + ': ' + e.message); } };
   await tentar(path.basename(nome('TABELA')) + '.pdf', () => imprimirPdf(`http://localhost:${porta}/tabela.html?arquivo=1`, nome('TABELA') + '.pdf'));
