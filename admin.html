@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Aiker · Painel administrativo</title>
+  <link rel="icon" href="img/icone.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/admin.css?v=202610201641">
+  <style>.demo-aviso{margin:6px 0 12px;padding:8px 12px;border-radius:10px;background:#fff3ec;color:#a8401c;font-size:13px}</style>
+</head>
+<body>
+  <!-- ============ LOGIN ============ -->
+  <section class="login" id="telaLogin">
+    <form class="login-caixa" id="formLogin">
+      <img src="img/logo-laranja.png" alt="aiker" class="login-logo">
+      <h1>Painel administrativo</h1>
+      <p>Entre com a senha para gerenciar o catálogo.</p>
+      <p class="demo-aviso">Demonstração · senha <b>demo</b></p>
+      <label class="campo">Usuário <small class="opc">(em branco se for o administrador principal)</small><input id="usuario" autocomplete="username" autocapitalize="off"></label>
+      <label class="campo">Senha<input type="password" id="senha" autocomplete="current-password" required autofocus></label>
+      <label class="lembrar"><input type="checkbox" id="lembrar" checked> Manter conectado neste computador</label>
+      <button class="btn btn-escuro largo" type="submit" id="btnEntrar">Entrar</button>
+      <p class="erro" id="erroLogin" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <div class="app" id="app" hidden>
+    <header class="barra-topo">
+      <div class="marca"><img src="img/logo-laranja.png" alt="aiker"><span class="tag">Admin</span></div>
+      <div class="status" id="status"><i></i><span>Carregando…</span></div>
+      <button class="btn-busca" type="button" id="btnPaleta" title="Buscar produto ou tela (Ctrl+K)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 1 0 3.7 10.7l4.3 4.3 1.4-1.4-4.3-4.3A6 6 0 0 0 10 4zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg><span>Buscar produto ou tela</span><kbd>Ctrl K</kbd></button>
+      <div class="topo-acoes">
+        <a class="btn btn-claro" href="./" target="_blank" rel="noopener">Ver catálogo</a>
+        <button class="btn btn-claro" type="button" id="btnPdf" title="Gera a tabela em PDF com as alterações atuais, mesmo antes de publicar">Gerar PDF</button>
+        <button class="btn btn-laranja" type="button" id="btnPublicar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l5 5h-3.5v7h-3V8H7l5-5zM5 18h14v2H5v-2z"/></svg>
+          Publicar<span class="pend" id="pend" hidden></span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="menu" id="menu" aria-label="Menu do painel">
+      <span class="menu-ind" id="menuInd" aria-hidden="true"></span>
+      <div class="menu-grupo">
+        <p class="menu-rot">Catálogo</p>
+        <button type="button" data-aba="inicio" class="on" title="Início">
+        <svg viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg><span>Início</span></button>
+        <button type="button" data-aba="produtos" title="Produtos">
+        <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg><span>Produtos</span></button>
+        <button type="button" data-aba="categorias" title="Categorias">
+        <svg viewBox="0 0 24 24"><path d="M3 5h8v6H3V5zm10 0h8v6h-8V5zM3 13h8v6H3v-6zm13 0h2v2h2v2h-2v2h-2v-2h-2v-2h2v-2z"/></svg><span>Categorias</span></button>
+      </div>
+      <div class="menu-grupo">
+        <p class="menu-rot">Atualizar</p>
+        <button type="button" data-aba="precos" title="Atualizar preços">
+        <svg viewBox="0 0 24 24"><path d="M12 2l9 9-9 9-9-9 9-9zm0 3.8L6.8 11 12 16.2 17.2 11 12 5.8zM12 9a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg><span>Atualizar preços</span></button>
+        <button type="button" data-aba="importar" title="Planilha">
+        <svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5V3zm2 2v14h10V8h-3V5H7zm2 6h6v2H9v-2zm0 4h6v2H9v-2z"/></svg><span>Planilha</span></button>
+      </div>
+      <div class="menu-grupo">
+        <p class="menu-rot">Compartilhar</p>
+        <button type="button" data-aba="link" title="Link do catálogo">
+        <svg viewBox="0 0 24 24"><path d="M10.6 13.4a4 4 0 0 0 5.66 0l3.53-3.53a4 4 0 0 0-5.66-5.66l-1.06 1.06 1.42 1.42 1.06-1.06a2 2 0 1 1 2.83 2.83l-3.54 3.53a2 2 0 0 1-2.83 0l-1.41 1.41zm2.8-2.8a4 4 0 0 0-5.66 0L4.21 14.13a4 4 0 0 0 5.66 5.66l1.06-1.06-1.42-1.42-1.06 1.06a2 2 0 1 1-2.83-2.83l3.54-3.53a2 2 0 0 1 2.83 0l1.41-1.41z"/></svg><span>Link do catálogo</span></button>
+        <button type="button" data-aba="vendedores" title="Vendedores">
+        <svg viewBox="0 0 24 24"><path d="M9 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm-7 8a7 7 0 0 1 14 0H2zm15.5-8.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 13c-.6 0-1.2.1-1.7.2A8.9 8.9 0 0 1 18 20h4a6 6 0 0 0-4-7z"/></svg><span>Vendedores</span></button>
+      </div>
+      <div class="menu-pe">
+        <button type="button" data-aba="config" title="Configurações">
+        <svg viewBox="0 0 24 24"><path d="M10.5 2h3l.5 2.6 1.9.8 2.2-1.5 2.1 2.1-1.5 2.2.8 1.9 2.5.4v3l-2.6.5-.8 1.9 1.5 2.2-2.1 2.1-2.2-1.5-1.9.8-.4 2.5h-3l-.5-2.6-1.9-.8-2.2 1.5-2.1-2.1 1.5-2.2-.8-1.9L2 13.5v-3l2.6-.5.8-1.9-1.5-2.2 2.1-2.1 2.2 1.5 1.9-.8.4-2.5zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span>Configurações</span></button>
+        <div class="menu-eu" id="menuEu">
+          <span class="menu-av" id="menuAv" aria-hidden="true">A</span>
+          <span class="menu-quem"><b id="menuNome">Administrador</b><button type="button" class="menu-sair" id="menuSair">Sair</button></span>
+        </div>
+      </div>
+    </nav>
+
+    <main class="conteudo">
+      <!-- INÍCIO -->
+      <section class="aba" id="aba-inicio">
+        <div class="cab"><div><h1>Início</h1><p>Resumo do catálogo e atalhos do dia a dia.</p></div></div>
+        <div id="inicio"></div>
+      </section>
+
+      <!-- PRODUTOS -->
+      <section class="aba" id="aba-produtos" hidden>
+        <div class="cab">
+          <div><h1>Produtos</h1><p id="resumoProdutos"></p></div>
+          <div class="cab-acoes">
+            <button class="btn btn-claro" type="button" id="btnDesfazer" disabled title="Desfazer a última alteração (Ctrl+Z)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V3L2 9l6 6v-4h6a4 4 0 0 1 0 8h-3v2h3a6 6 0 0 0 0-12H8z"/></svg>Desfazer</button>
+            <label class="btn btn-claro" title="Selecione várias fotos de uma vez; o nome do arquivo deve ser o código do produto (ex.: ACV-120.jpg, ACV-120-2.jpg)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8.6l4-4 3 3 2-2 5 5V7H5zm11 2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/></svg>Fotos em lote<input type="file" accept="image/*" multiple id="arqLote" hidden></label>
+            <button class="btn btn-claro" type="button" id="btnLixeira" title="Produtos excluídos nos últimos 30 dias">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1 12H7L6 9zm4 2v8h1.5v-8H10zm2.5 0v8H14v-8h-1.5z"/></svg>Lixeira<span class="n-lixo" id="nLixeira"></span></button>
+            <button class="btn btn-escuro" type="button" id="btnNovo">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>Novo produto</button>
+          </div>
+        </div>
+        <div class="segmentos" id="segmentos" role="tablist" aria-label="Situação"></div>
+        <div class="ferramentas">
+          <label class="busca"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg>
+            <input type="search" id="fBusca" placeholder="Buscar código, nome ou especificação" aria-label="Buscar produtos"><kbd>/</kbd></label>
+          <select id="fCat" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+        </div>
+        <div class="tabela-wrap">
+          <table class="tabela" id="tabela">
+            <thead><tr>
+              <th class="c-sel"><input type="checkbox" id="selTodos" aria-label="Selecionar todos os produtos visíveis"></th>
+              <th class="c-foto"></th><th aria-sort="none"><button type="button" class="th-ord" data-ord="codigo">Código</button></th><th aria-sort="none"><button type="button" class="th-ord" data-ord="nome">Produto</button></th><th class="c-num" aria-sort="none"><button type="button" class="th-ord" data-ord="preco">Preço un.</button></th><th class="c-num" aria-sort="none"><button type="button" class="th-ord" data-ord="promo">Promoção</button></th><th class="c-num" aria-sort="none"><button type="button" class="th-ord" data-ord="pcs">Pç/cx</button></th><th class="c-num c-vcx" aria-sort="none"><button type="button" class="th-ord" data-ord="vcx">Valor caixa</button></th>
+              <th class="c-tog">Esgotado</th><th class="c-tog">Visível</th><th class="c-tog">Destaque</th><th class="c-acao"></th>
+            </tr></thead>
+            <tbody id="linhas"></tbody>
+          </table>
+        </div>
+        <p class="dica-teclado">Dica: edite o preço direto na lista. <kbd>Enter</kbd> desce para o próximo produto, <kbd>Esc</kbd> desfaz a digitação.</p>
+      </section>
+
+      <!-- CATEGORIAS -->
+      <section class="aba" id="aba-categorias" hidden>
+        <div class="cab"><div><h1>Categorias</h1><p id="resumoCat"></p></div>
+          <div class="cab-acoes"><button class="btn btn-escuro" type="button" id="btnOrganizar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>Organizar tabela</button></div></div>
+        <form class="cartao nova-cat" id="formNovaCat">
+          <label class="campo">Nova categoria<input id="novaCat" placeholder="Ex.: Iluminação | Faróis" autocomplete="off"></label>
+          <label class="campo">Posição<select id="novaCatPos"><option value="fim">No fim da lista</option><option value="inicio">No começo da lista</option></select></label>
+          <button class="btn btn-escuro" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>Criar categoria</button>
+        </form>
+        <ol class="lista-cat" id="listaCat"></ol>
+        <p class="dica-teclado">Clique no nome para renomear (os produtos acompanham). Use as setas para mudar a ordem. Categorias sem produtos não aparecem no catálogo.</p>
+      </section>
+
+      <!-- ATUALIZAR PREÇOS -->
+      <section class="aba" id="aba-precos" hidden>
+        <div class="cab"><div><h1>Atualizar preços e estoque</h1><p>Use o que o seu chefe mandou: envie o print ou cole o texto. Você confere antes de aplicar.</p></div></div>
+        <div class="dois">
+          <div class="cartao">
+            <h2>1. Envie o print <span class="op">ou cole o texto</span></h2>
+            <label class="soltar" id="soltarPrint">
+              <input type="file" accept="image/*" id="arqPrint" hidden>
+              <svg viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8.6l4-4 3 3 2-2 5 5V7H5zm11 2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/></svg>
+              <strong>Clique ou arraste o print aqui</strong>
+              <span>Também dá para colar a imagem com Ctrl+V</span>
+            </label>
+            <p class="ocr" id="ocrStatus"></p>
+            <label class="campo">Texto (uma linha por produto: código, estoque, preço)
+              <textarea id="txtPrecos" rows="10" placeholder="SIGMA-ML212   50   110&#10;AVA-105       40   15&#10;ACV-235       50   68"></textarea>
+            </label>
+            <div class="linha-btns">
+              <label class="campo mini">Ordem das colunas
+                <select id="colNum1"><option value="estoque">Código · Estoque · Preço</option><option value="preco">Código · Preço · Estoque</option></select>
+              </label>
+              <button class="btn btn-escuro" type="button" id="btnAnalisar">Analisar</button>
+            </div>
+            <p class="dica">Estoque <b>0</b> marca o produto como <b>esgotado</b>. Estoque maior que 0 deixa disponível.</p>
+          </div>
+          <div class="cartao">
+            <h2>2. Confira e aplique</h2>
+            <div id="previa" class="previa"><p class="vazio-txt">A prévia aparece aqui depois de analisar.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLANILHA -->
+      <section class="aba" id="aba-importar" hidden>
+        <div class="cab"><div><h1>Planilha</h1><p>Atualize muitos produtos de uma vez com Excel ou Google Planilhas.</p></div></div>
+        <div class="dois">
+          <div class="cartao">
+            <h2>Baixar planilha atual</h2>
+            <p>Baixe todos os produtos em Excel, edite o que quiser e envie de volta ao lado.</p>
+            <label class="troca"><input type="checkbox" id="expSemPreco"><span class="trilho"></span> Sem preços (para enviar a quem não deve ver valores)</label>
+            <button class="btn btn-escuro" type="button" id="btnExportar">Baixar planilha (.xlsx)</button>
+            <p class="dica">Colunas aceitas: CODIGO, CATEGORIA, NOME, PRECO, PRECO PROMO, PROMO INICIO, PROMO FIM, PCS/CX, ESGOTADO, ESTOQUE, ATIVO, DESTAQUE, ESPEC 1…20, FOTO 1…8. Pode enviar só as colunas que quer mudar. Por exemplo: só CODIGO, PRECO e ESTOQUE.</p>
+          </div>
+          <div class="cartao">
+            <h2>Enviar planilha</h2>
+            <label class="soltar" id="soltarPlanilha">
+              <input type="file" accept=".xlsx,.xls,.csv" id="arqPlanilha" hidden>
+              <svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5V3zm2 2v14h10V8h-3V5H7zm2 6h6v2H9v-2zm0 4h6v2H9v-2z"/></svg>
+              <strong>Clique ou arraste a planilha aqui</strong>
+              <span>.xlsx, .xls ou .csv</span>
+            </label>
+            <fieldset class="modo">
+              <label><input type="radio" name="modo" value="mesclar" checked> <b>Atualizar e adicionar</b><span>Atualiza os produtos da planilha e adiciona os novos. Os outros continuam iguais.</span></label>
+              <label><input type="radio" name="modo" value="substituir"> <b>Substituir catálogo inteiro</b><span>O catálogo fica exatamente igual à planilha. Produtos que não estão nela são removidos.</span></label>
+            </fieldset>
+            <div id="previaImport"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LINK -->
+      <section class="aba" id="aba-link" hidden>
+        <div class="cab"><div><h1>Link do catálogo</h1><p>O link é sempre o mesmo e mostra a última versão que você publicou.</p></div></div>
+        <div class="cartao">
+          <h2>Link para compartilhar</h2>
+          <div class="link-unico">
+            <input id="linkCatalogo" readonly onclick="this.select()">
+            <button class="btn btn-escuro" type="button" id="btnCopiarLink">Copiar link</button>
+            <a class="btn btn-claro" id="btnAbrirLink" target="_blank" rel="noopener">Abrir</a>
+          </div>
+        </div>
+        <div class="cartao">
+          <h2>Mensagem para o grupo</h2>
+          <textarea id="msgGrupo" rows="5" readonly></textarea>
+          <div class="linha-btns"><button class="btn btn-escuro" type="button" id="btnCopiarMsg">Copiar mensagem</button></div>
+        </div>
+      </section>
+
+      <!-- VENDEDORES -->
+      <section class="aba" id="aba-vendedores" hidden>
+        <div class="cab">
+          <div><h1>Vendedores</h1><p>Cada vendedor entra na área dele com usuário e senha para montar propostas com desconto.</p></div>
+          <button class="btn btn-escuro" type="button" id="btnNovoVend"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>Novo vendedor</button>
+        </div>
+        <div class="cartao">
+          <h2>Endereço da área do vendedor</h2>
+          <div class="link-unico">
+            <input id="linkVendedor" readonly onclick="this.select()">
+            <button class="btn btn-escuro" type="button" id="btnCopiarLinkVend">Copiar link</button>
+          </div>
+          <p class="dica">Mande este link só para os vendedores. Cada um entra com o próprio usuário e senha.</p>
+        </div>
+        <ul class="lista-vend" id="listaVend"></ul>
+        <div class="cartao atv">
+          <div class="atv-cab"><h2>Atividade dos vendedores</h2>
+            <label class="campo mini"><select id="atvPeriodo" aria-label="Período"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="0">Tudo</option></select></label></div>
+          <p class="dica" style="margin-top:0">Cada proposta que o vendedor salva ou gera em PDF aparece aqui, com cliente, produtos, descontos e total.</p>
+          <div id="atividade"></div>
+        </div>
+      </section>
+
+      <!-- CONFIG -->
+      <section class="aba" id="aba-config" hidden>
+        <div class="cab"><div><h1>Configurações</h1><p>O que o cliente vê, a tabela em PDF, as cópias de segurança e quem acessa o painel.</p></div></div>
+        <div class="cfg">
+          <nav class="cfg-nav" id="cfgNav" aria-label="Seções das configurações">
+            <a href="#cfg-catalogo" class="on">Catálogo</a>
+            <a href="#cfg-imagens">Imagens de capa</a>
+            <a href="#cfg-pdf">Tabela em PDF</a>
+            <a href="#cfg-dados">Backup e versões</a>
+            <a href="#cfg-acesso">Acesso ao painel</a>
+          </nav>
+
+          <div class="cfg-corpo">
+            <section class="cfg-grupo" id="cfg-catalogo" aria-labelledby="cfgT1">
+              <header class="cfg-cab"><h2 id="cfgT1">Catálogo</h2><p>Textos que o cliente vê no site. Mudam depois de Publicar.</p></header>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Faixa de promoção</h3><p>Barra de destaque no topo do catálogo, para campanhas como a Black Friday.</p></div>
+                <div class="cfg-ctl">
+                  <label class="troca"><input type="checkbox" id="cPromoAtiva"><span class="trilho"></span> Mostrar faixa de promoção no catálogo</label>
+                  <label class="campo">Título<input id="cPromoTitulo" placeholder="Ex.: Black Friday"></label>
+                  <label class="campo">Texto<textarea id="cPromoTexto" rows="3"></textarea></label>
+                  <label class="campo">Observação<input id="cPromoObs"></label>
+                  <label class="campo cfg-curto">Validade (texto que aparece)<input id="cPromoValidade" placeholder="Ex.: Válida de 13/10 até 27/11"></label>
+                  <div class="cfg-par">
+                    <label class="campo">Faixa aparece a partir de<input type="date" id="cPromoInicio"></label>
+                    <label class="campo">Faixa some depois de<input type="date" id="cPromoFim"></label>
+                  </div>
+                  <p class="dica">Com datas, a faixa liga e desliga sozinha. Sem datas, fica como a chave acima.</p>
+                </div>
+              </div>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Textos do topo do site</h3><p>A frase principal da abertura do catálogo. Em branco, usa o texto padrão.</p></div>
+                <div class="cfg-ctl">
+                  <label class="campo">Título<input id="cHeroTitulo" placeholder="Tecnologia automotiva para o seu negócio."></label>
+                  <label class="campo">Texto<textarea id="cHeroTexto" rows="3" placeholder="Multimídias, câmeras, som, energia e acessórios com qualidade Aiker. Explore a linha completa e monte sua lista de orçamento."></textarea></label>
+                </div>
+              </div>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Últimas unidades</h3><p>Vendedor e cliente veem o aviso "Últimas unidades" quando o estoque está baixo. O número do estoque nunca aparece para eles.</p></div>
+                <div class="cfg-ctl">
+                  <label class="campo cfg-curto">Avisar quando restarem até (caixas)<select id="cEstoqueAlertaCx"><option value="0">Não avisar</option><option value="1">1 caixa</option><option value="2">2 caixas</option><option value="3">3 caixas</option><option value="5">5 caixas</option><option value="10">10 caixas</option></select></label>
+                </div>
+              </div>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Contatos da empresa</h3><p>Aparecem no rodapé do catálogo, para o cliente falar com a empresa.</p></div>
+                <div class="cfg-ctl cfg-par">
+                  <label class="campo">Telefone<input id="cTelefone" inputmode="tel"></label>
+                  <label class="campo">E-mail<input id="cEmail" type="email"></label>
+                </div>
+              </div>
+            </section>
+
+            <section class="cfg-grupo" id="cfg-imagens" aria-labelledby="cfgT2">
+              <header class="cfg-cab"><h2 id="cfgT2">Imagens de capa</h2><p>Troque sempre que mudar a campanha. Aceita JPG, PNG, WEBP ou PDF (usa a 1ª página). A imagem é guardada sem perder qualidade.</p></header>
+              <div class="capas" id="capas"></div>
+            </section>
+
+            <section class="cfg-grupo" id="cfg-pdf" aria-labelledby="cfgT3">
+              <header class="cfg-cab"><h2 id="cfgT3">Tabela em PDF</h2><p>Vale para quem abrir o link da tabela (clientes e vendedores), depois de Publicar.</p></header>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>O que entra na tabela</h3><p>Esgotados aparecem sem código, nome nem preço.</p></div>
+                <div class="cfg-ctl">
+                  <label class="troca"><input type="checkbox" id="cPdfPromo"><span class="trilho"></span> Incluir a capa da promoção</label>
+                  <label class="troca"><input type="checkbox" id="cPdfEsgotados"><span class="trilho"></span> Mostrar produtos esgotados</label>
+                </div>
+              </div>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Tabela publicada</h3><p>A versão que os clientes recebem. Para gerar com as mudanças de agora, use Gerar PDF no topo.</p></div>
+                <div class="cfg-ctl"><div class="linha-btns"><a class="btn btn-claro" href="tabela.html" target="_blank" rel="noopener">Abrir tabela publicada</a></div></div>
+              </div>
+            </section>
+
+            <section class="cfg-grupo" id="cfg-dados" aria-labelledby="cfgT4">
+              <header class="cfg-cab"><h2 id="cfgT4">Backup e versões</h2><p>O catálogo fica só neste computador. Guarde cópias fora dele.</p></header>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Cópia de segurança</h3><p>Um arquivo com produtos, preços, configurações, vendedores, histórico de preços e fotos enviadas pelo painel. Guarde num pendrive ou no Google Drive.</p></div>
+                <div class="cfg-ctl">
+                  <div class="linha-btns">
+                    <button class="btn btn-escuro" type="button" id="btnBackup">Baixar backup</button>
+                    <button class="btn btn-claro" type="button" id="btnRestaurar">Restaurar backup…</button>
+                    <input type="file" id="arqBackup" accept=".json,application/json" hidden>
+                  </div>
+                  <p class="dica" id="backupInfo"></p>
+                </div>
+              </div>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Desfazer uma publicação</h3><p>Publicou algo errado? Volte o catálogo e o painel para uma das 30 últimas publicações, guardadas sozinhas em <code>dados-dev/copias</code>.</p></div>
+                <div class="cfg-ctl"><div class="linha-btns"><button class="btn btn-claro" type="button" id="btnVersoes">Ver versões anteriores</button></div></div>
+              </div>
+            </section>
+
+            <section class="cfg-grupo" id="cfg-acesso" aria-labelledby="cfgT5">
+              <header class="cfg-cab"><h2 id="cfgT5">Acesso ao painel</h2><p id="quemSou"></p></header>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Sua senha</h3><p>Pelo menos 4 caracteres. Vale a partir da próxima entrada.</p></div>
+                <div class="cfg-ctl">
+                  <div class="linha-btns cfg-senha">
+                    <label class="campo">Nova senha<input type="password" id="novaSenha" autocomplete="new-password"></label>
+                    <button class="btn btn-claro" type="button" id="btnSenha">Trocar senha</button>
+                  </div>
+                </div>
+              </div>
+              <div class="cfg-linha" id="cartaoUsuarios" hidden>
+                <div class="cfg-rot"><h3>Usuários do painel</h3><p>Para outra pessoa ajudar com o próprio usuário e senha. Fica registrado quem publicou cada versão.</p></div>
+                <div class="cfg-ctl">
+                  <ul class="lista-usuarios" id="listaUsuarios"></ul>
+                  <div class="linha-btns"><button class="btn btn-claro" type="button" id="btnNovoUsuario">Novo usuário</button></div>
+                </div>
+              </div>
+              <div class="cfg-linha">
+                <div class="cfg-rot"><h3>Sair</h3><p>Desconecta este computador. Para entrar de novo, é preciso a senha.</p></div>
+                <div class="cfg-ctl"><div class="linha-btns"><button class="btn btn-claro" type="button" id="btnSair">Sair do painel</button></div></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="massa" id="massa" role="region" aria-label="Ações para os produtos selecionados" hidden>
+    <span class="massa-n" id="massaN">0 selecionados</span>
+    <div class="massa-acoes">
+      <button type="button" data-massa="esgotar">Marcar esgotado</button>
+      <button type="button" data-massa="disponivel">Marcar disponível</button>
+      <button type="button" data-massa="preco">Ajustar preço</button>
+      <button type="button" data-massa="promo">Promoção</button>
+      <button type="button" data-massa="pcs">Peças por caixa</button>
+      <button type="button" data-massa="destacar">Destacar</button>
+      <button type="button" data-massa="tirar-destaque">Tirar destaque</button>
+      <button type="button" data-massa="categoria">Mudar categoria</button>
+      <button type="button" data-massa="ocultar">Ocultar</button>
+      <button type="button" data-massa="mostrar">Mostrar</button>
+      <button type="button" data-massa="excluir" class="perigo">Excluir</button>
+    </div>
+    <button type="button" class="massa-fechar" id="massaLimpar" aria-label="Limpar seleção">×</button>
+  </div>
+
+  <!-- ============ EDITOR DE PRODUTO ============ -->
+  <dialog class="gaveta" id="editor" aria-label="Editar produto">
+    <form method="dialog" class="ed" id="formEd">
+      <div class="ed-cab">
+        <div><p class="sobre" id="edSobre">Editar produto</p><h2 id="edTitulo">Produto</h2></div>
+        <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+      </div>
+      <div class="ed-corpo">
+        <div class="ed-bloco">
+          <h3>Fotos</h3>
+          <div class="fotos-ed" id="edFotos"></div>
+          <label class="soltar pequeno" id="soltarFotos">
+            <input type="file" accept="image/*" multiple id="arqFotos" hidden>
+            <strong>+ Adicionar fotos</strong><span>Clique ou arraste. Pode escolher várias. A primeira é a principal.</span>
+          </label>
+          <p class="ocr" id="edFotoStatus"></p>
+        </div>
+        <div class="ed-bloco grade2">
+          <label class="campo">Código<input id="eCodigo" required></label>
+          <label class="campo">Categoria<input id="eCategoria" data-cat autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" required></label>
+          <label class="campo inteiro">Nome<input id="eNome" required></label>
+          <label class="campo">Preço unitário (R$)<input id="ePreco" inputmode="decimal" placeholder="0,00"></label>
+          <label class="campo">Preço promocional (R$)<input id="ePromo" inputmode="decimal" placeholder="Vazio = sem promoção"></label>
+          <label class="campo">Peças por caixa<input id="ePcs" placeholder="Ex.: 50"></label>
+          <label class="campo">Estoque (unidades)<input id="eEstoque" inputmode="numeric" placeholder="Vazio = não informado"></label>
+          <label class="campo">Promoção começa em<input type="date" id="ePromoDe"></label>
+          <label class="campo">Promoção termina em<input type="date" id="ePromoAte"></label>
+          <p class="dica inteiro" style="margin-top:-4px">Com datas, o preço promocional entra e sai sozinho. Sem datas, vale até você tirar.</p>
+          <details class="historico inteiro" id="edHist" hidden><summary>Histórico de preços <span id="edHistN"></span></summary><div id="edHistCorpo"></div></details>
+          <div class="toggles inteiro">
+            <label class="troca"><input type="checkbox" id="eEsgotado"><span class="trilho"></span> Esgotado</label>
+            <label class="troca"><input type="checkbox" id="eAtivo"><span class="trilho"></span> Visível no catálogo</label>
+            <label class="troca"><input type="checkbox" id="eDestaque"><span class="trilho"></span> Destaque</label>
+          </div>
+        </div>
+        <div class="ed-bloco">
+          <h3>Especificações</h3>
+          <p class="dica">No formato <b>Rótulo: valor</b>. Ex.: <i>Tela: 7" IPS</i></p>
+          <p class="dica" id="edSpecDica" hidden>Já vieram os campos mais usados nesta categoria. Preencha os valores; os vazios são ignorados.</p>
+          <div id="edSpecs" class="specs-ed"></div>
+          <button class="btn-texto" type="button" id="btnAddSpec">+ Adicionar especificação</button>
+        </div>
+      </div>
+      <div class="ed-pe">
+        <div class="ed-pe-esq">
+          <button class="btn-texto perigo" type="button" id="btnExcluir">Excluir</button>
+          <button class="btn-texto" type="button" id="btnDuplicar">Duplicar</button>
+        </div>
+        <button class="btn btn-claro" type="button" data-fechar>Cancelar</button>
+        <button class="btn btn-escuro" type="submit" id="btnSalvarEd">Salvar produto</button>
+      </div>
+    </form>
+  </dialog>
+  <datalist id="listaCategorias"></datalist>
+
+  <!-- ============ MODAIS GERAIS ============ -->
+  <dialog class="organizar" id="organizar" aria-labelledby="orgTitulo">
+    <header class="org-topo">
+      <div><h2 id="orgTitulo">Organizar tabela</h2><p id="orgInfo"></p></div>
+      <label class="campo mini org-sel">Categoria<select id="orgCat"></select></label>
+      <div class="org-acoes"><button class="btn btn-claro" type="button" id="orgPdf">Gerar PDF</button><button class="btn btn-claro" type="button" id="orgFechar">Fechar</button><button class="btn btn-escuro" type="button" id="orgSalvar" disabled>Salvar ordem</button></div>
+    </header>
+    <p class="org-dica">Arraste o produto para <b>uma casa em branco</b> (ele vai exatamente para lá) ou <b>para cima de outro produto</b> (entra antes ou depois dele). <b>Nova linha</b> manda o produto para o começo da próxima linha; <b>Remover espaço</b> (passe o mouse na casa em branco) puxa os produtos de volta. Teclado: setas trocam de casa, <kbd>N</kbd> nova linha.</p>
+    <div class="org-paginas" id="orgPaginas"></div>
+  </dialog>
+  <dialog class="modal" id="modal"></dialog>
+  <dialog class="paleta" id="paleta" aria-label="Busca rápida">
+    <div class="pal-campo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 1 0 3.7 10.7l4.3 4.3 1.4-1.4-4.3-4.3A6 6 0 0 0 10 4zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg><input id="palBusca" placeholder="Código, nome do produto, tela ou ação" autocomplete="off" role="combobox" aria-controls="palLista" aria-expanded="true"><kbd>Esc</kbd></div>
+    <ul class="pal-lista" id="palLista" role="listbox"></ul>
+    <p class="pal-pe"><kbd>↑</kbd><kbd>↓</kbd> escolher · <kbd>Enter</kbd> abrir</p>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/demo-api.js"></script>
+
+  <script src="config.js?v=202610201641"></script>
+  <script src="assets/comum.js?v=202610201641"></script>
+  <script src="assets/admin.js?v=202610201641"></script>
+</body>
+</html>

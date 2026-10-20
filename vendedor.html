@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Aiker · Área do vendedor</title>
+  <link rel="icon" href="img/icone.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/vendedor.css?v=202610201641">
+  <style>.demo-aviso{margin:6px 0 12px;padding:8px 12px;border-radius:10px;background:#fff3ec;color:#a8401c;font-size:13px}</style>
+</head>
+<body>
+  <!-- ============ LOGIN ============ -->
+  <section class="login" id="telaLogin">
+    <form class="login-caixa" id="formLogin">
+      <img src="img/logo-laranja.png" alt="aiker" class="login-logo">
+      <h1>Área do vendedor</h1>
+      <p>Entre com o seu usuário e senha para montar propostas.</p>
+      <label class="campo">Usuário<input id="lUsuario" autocomplete="username" autocapitalize="off" required autofocus></label>
+      <p class="demo-aviso">Demonstração · usuário <b>demo</b> e senha <b>demo</b></p>
+      <label class="campo">Senha<input id="lSenha" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-escuro largo" type="submit" id="btnEntrar">Entrar</button>
+      <p class="erro" id="erroLogin" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <div class="app" id="app" hidden>
+    <header class="topo">
+      <div class="marca"><img src="img/logo-laranja.png" alt="aiker"><span class="tag">Vendedor</span></div>
+      <div class="topo-acoes">
+        <button class="btn btn-claro" type="button" id="btnImportar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.2l3.6-3.6L17 11l-5 5-5-5 1.4-1.4 3.6 3.6V3h2zM5 18h14v2H5v-2z"/></svg><span>Importar lista do cliente</span></button>
+        <button class="btn btn-claro" type="button" id="btnPropostas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2zm2 2v16h10V8h-4V4H8zm2 8h6v2h-6v-2zm0 4h6v2h-6v-2z"/></svg><span>Minhas propostas</span><i class="cont" id="contPropostas" hidden></i></button>
+        <div class="quem"><span class="av" id="avVend"></span><div><b id="nomeVend"></b><button type="button" class="btn-texto" id="btnSair">Sair</button></div></div>
+      </div>
+    </header>
+
+    <main class="area">
+      <!-- PRODUTOS -->
+      <section class="painel produtos" aria-label="Produtos">
+        <div class="painel-cab">
+          <h2>Produtos</h2>
+          <label class="busca"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg>
+            <input type="search" id="busca" placeholder="Código ou nome" autocomplete="off" aria-label="Buscar produto"><kbd>/</kbd></label>
+          <select id="fCat" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+        </div>
+        <ul class="lista-prod" id="listaProd"></ul>
+      </section>
+
+      <!-- PROPOSTA -->
+      <section class="painel proposta" aria-label="Proposta">
+        <div class="painel-cab prop-cab">
+          <div><h2>Proposta <span id="numProposta"></span></h2><p class="sub" id="statusProposta">Nova proposta</p></div>
+          <button class="btn-texto" type="button" id="btnNova">Nova proposta</button>
+        </div>
+
+        <details class="cliente" id="blocoCliente" open>
+          <summary><span>Cliente</span><em id="resumoCliente">Preencha os dados do cliente</em></summary>
+          <div class="campos">
+            <label class="campo largo2">Empresa / nome<input id="cEmpresa" autocomplete="off"></label>
+            <label class="campo">CNPJ / CPF<input id="cDoc" inputmode="numeric" autocomplete="off"></label>
+            <label class="campo">Cidade / UF<input id="cCidade" autocomplete="off"></label>
+            <label class="campo">Contato<input id="cContato" autocomplete="off" placeholder="Nome e telefone"></label>
+            <label class="campo">E-mail<input id="cEmail" type="email" autocomplete="off"></label>
+          </div>
+        </details>
+
+        <div class="itens-wrap">
+          <table class="itens">
+            <thead><tr><th class="i-prod">Produto</th><th class="i-venda">Venda</th><th class="i-qtd">Qtd.</th><th class="n">Preço un.</th><th class="n i-desc">Desc.</th><th class="n">Total</th><th></th></tr></thead>
+            <tbody id="itens"></tbody>
+          </table>
+          <div class="vazio" id="semItens"><strong>Nenhum produto na proposta</strong><span>Clique em <b>+</b> nos produtos ao lado, ou importe a lista que o cliente enviou.</span></div>
+        </div>
+
+        <div class="fechamento">
+          <div class="condicoes">
+            <label class="campo">Desconto no pedido inteiro
+              <span class="pct"><input id="descPedido" inputmode="decimal" placeholder="0"><i>%</i></span></label>
+            <label class="campo">Condição de pagamento<input id="pagamento" placeholder="Ex.: 28/35/42 dias no boleto"></label>
+            <label class="campo">Validade da proposta<select id="validade"><option value="3">3 dias</option><option value="7" selected>7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option></select></label>
+            <label class="campo largo2">Observações<textarea id="obs" rows="2" placeholder="Prazo de entrega, frete, brindes…"></textarea></label>
+          </div>
+          <dl class="totais" id="totais"></dl>
+        </div>
+
+        <div class="acoes-prop">
+          <button class="btn btn-claro" type="button" id="btnCopiar">Copiar resumo</button>
+          <button class="btn btn-claro" type="button" id="btnSalvar">Salvar</button>
+          <button class="btn btn-laranja" type="button" id="btnPdf">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2zm2 2v16h10V8h-4V4H8zm1 9h2.5a2 2 0 0 1 0 4H10v2H9v-6zm1 1v2h1.5a1 1 0 0 0 0-2H10zm4-1h1.6a2.4 2.4 0 0 1 0 4.8H14V13zm1 1v2.8h.6a1.4 1.4 0 0 0 0-2.8H15z"/></svg>
+            Gerar proposta em PDF</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="modal" id="modal"></dialog>
+  <dialog class="gaveta" id="gavetaPropostas" aria-label="Minhas propostas">
+    <div class="gaveta-cab"><h2>Minhas propostas</h2><button class="fechar" type="button" data-fechar aria-label="Fechar">×</button></div>
+    <ul class="lista-propostas" id="listaPropostas"></ul>
+  </dialog>
+  <div class="impressao" id="impressao"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/demo-api.js"></script>
+
+  <script src="config.js?v=202610201641"></script>
+  <script src="dados/dados-locais.js?v=202610201641"></script>
+  <script src="assets/comum.js?v=202610201641"></script>
+  <script src="assets/vendedor.js?v=202610201641"></script>
+</body>
+</html>

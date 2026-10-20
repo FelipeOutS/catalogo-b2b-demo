@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tabela de Produtos Aiker</title>
+  <link rel="icon" href="img/icone.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Oswald:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/tabela.css?v=202610201641">
+  <style>.demo-aviso{margin:6px 0 12px;padding:8px 12px;border-radius:10px;background:#fff3ec;color:#a8401c;font-size:13px}</style>
+</head>
+<body>
+  <div class="painel">
+    <div class="painel-in">
+      <img class="painel-logo" src="img/logo-branco.png" alt="aiker">
+      <span class="painel-info" id="painelInfo">Tabela de produtos</span>
+      <button type="button" id="gerar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v9.2l3.6-3.6L18 10l-6 6-6-6 1.4-1.4 3.6 3.6V3zM5 18h14v2H5v-2z"/></svg>Baixar PDF</button>
+    </div>
+  </div>
+  <div id="folhas"><p class="carregando">Montando a tabela…</p></div>
+
+  <script src="assets/demo-api.js"></script>
+
+  <script src="config.js?v=202610201641"></script>
+  <script src="dados/dados-locais.js?v=202610201641"></script>
+  <script src="assets/comum.js?v=202610201641"></script>
+  <script src="assets/tabela.js?v=202610201641"></script>
+</body>
+</html>

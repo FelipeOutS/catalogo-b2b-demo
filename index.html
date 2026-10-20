@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Aiker · Catálogo de Produtos</title>
+  <meta name="description" content="Catálogo Aiker de tecnologia automotiva: câmeras, multimídias, som automotivo, inversores, ventiladores e acessórios para revenda.">
+  <meta name="theme-color" content="#0f0e0e">
+  <meta property="og:title" content="Aiker · Catálogo de Produtos">
+  <meta property="og:description" content="Tecnologia automotiva para revenda. Veja o catálogo completo e monte sua lista de orçamento.">
+  <meta property="og:image" content="img/hero.webp">
+  <link rel="icon" href="img/icone.png">
+  <link rel="apple-touch-icon" href="img/icone.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css?v=202610201641">
+  <style>.demo-aviso{margin:6px 0 12px;padding:8px 12px;border-radius:10px;background:#fff3ec;color:#a8401c;font-size:13px}</style>
+</head>
+<body>
+  <div class="aviso-topo" id="avisoTopo">
+    <div class="w"><span id="atualizado">Catálogo de produtos</span><span class="sep" aria-hidden="true"></span><span>Vendas no atacado, por caixa</span></div>
+  </div>
+
+  <header class="topo">
+    <div class="w topo-in">
+      <a class="marca" href="#" data-inicio aria-label="Aiker, voltar ao início"><img src="img/logo-laranja.png" alt="aiker" width="132" height="42"></a>
+      <label class="busca">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg>
+        <input id="busca" type="search" placeholder="Buscar por código, produto ou característica" autocomplete="off" enterkeyhint="search" aria-label="Buscar produtos">
+        <kbd class="atalho" aria-hidden="true">/</kbd>
+      </label>
+      <button class="btn-lista" id="abrirLista" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8l4-4zm0 2.83L6.83 8H8V6.83zM10 6v3a1 1 0 0 1-1 1H6v9h12V6h-8zm-1 6h6v2H9v-2zm0 3h6v2H9v-2z"/></svg>
+        <span class="txt">Lista de orçamento</span>
+        <span class="cont" id="contLista" hidden>0</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="w hero-in">
+        <div class="hero-txt">
+          <h1>Tecnologia automotiva para o seu negócio.</h1>
+          <p class="hero-p">Multimídias, câmeras, som, energia e acessórios com qualidade Aiker. Explore a linha completa e monte sua lista de orçamento.</p>
+          <div class="hero-acoes">
+            <a class="btn btn-claro" href="#catalogo">Explorar catálogo</a>
+            <a class="btn btn-linha" href="tabela.html" target="_blank" rel="noopener">Tabela em PDF</a>
+          </div>
+          <p class="hero-atual" id="heroAtual"></p>
+        </div>
+        <div class="hero-midia" aria-hidden="true"><img src="img/hero.webp" alt=""></div>
+      </div>
+    </section>
+
+    <section class="promo" id="promo" hidden></section>
+
+    <section class="cats-visuais w" id="catsVisuais" aria-label="Categorias">
+      <div class="sec-cab"><h2>Navegue por categoria</h2></div>
+      <div class="tiles" id="tiles"></div>
+    </section>
+
+    <section class="destaques w" id="destaquesSec" hidden>
+      <div class="sec-cab">
+        <h2>Destaques</h2>
+        <div class="setas"><button type="button" data-rolar="-1" aria-label="Anterior">‹</button><button type="button" data-rolar="1" aria-label="Próximo">›</button></div>
+      </div>
+      <div class="faixa" id="destaques"></div>
+    </section>
+
+    <section class="catalogo w" id="catalogo">
+      <aside class="lateral" aria-label="Categorias e filtros">
+        <p class="lateral-tit">Categorias</p>
+        <nav class="lista-cats" id="listaCats"></nav>
+        <p class="lateral-tit">Filtrar</p>
+        <label class="troca"><input type="checkbox" id="fPromo"><span class="trilho-troca"></span> Somente promoções</label>
+        <label class="troca"><input type="checkbox" id="fDisp"><span class="trilho-troca"></span> Somente disponíveis</label>
+      </aside>
+
+      <div class="conteudo">
+        <nav class="chips" id="chips" aria-label="Categorias"></nav>
+        <div class="barra">
+          <div>
+            <h2 class="titulo-cat" id="tituloCat">Todos os produtos</h2>
+            <p class="contagem" id="contagem">Carregando…</p>
+          </div>
+          <div class="barra-dir">
+            <button class="filtro-movel" type="button" id="abrirFiltros">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v2H3V5zm3 6h12v2H6v-2zm3 6h6v2H9v-2z"/></svg> Filtros
+            </button>
+            <div class="visao" role="group" aria-label="Forma de exibir">
+              <button type="button" data-visao="grade" class="on" aria-pressed="true" title="Grade"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg><span>Grade</span></button>
+              <button type="button" data-visao="lista" aria-pressed="false" title="Lista"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h4v4H4V5zm6 1h10v2H10V6zM4 10h4v4H4v-4zm6 1h10v2H10v-2zm-6 4h4v4H4v-4zm6 1h10v2H10v-2z"/></svg><span>Lista</span></button>
+            </div>
+            <label class="ordem">
+              <span>Ordenar</span>
+              <select id="ordem">
+                <option value="cat">Relevância</option>
+                <option value="menor">Menor preço</option>
+                <option value="maior">Maior preço</option>
+                <option value="cod">Código</option>
+                <option value="nome">Nome</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div id="lista" class="lista"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <div class="w rodape-in">
+      <div class="rodape-marca">
+        <img src="img/logo-branco.png" alt="aiker" width="120" height="38">
+        <p>Tecnologia automotiva. Produtos para revenda com distribuição por caixa.</p>
+      </div>
+      <div>
+        <p class="rodape-tit">Atendimento</p>
+        <div id="rodapeContato"><p>Fale com o seu vendedor.</p></div>
+      </div>
+      <div>
+        <p class="rodape-tit">Materiais</p>
+        <p><a href="tabela.html" target="_blank" rel="noopener">Tabela de preços em PDF</a></p>
+        <p><a href="#catalogo">Catálogo completo</a></p>
+      </div>
+    </div>
+    <div class="w rodape-legal">
+      <p>Imagens meramente ilustrativas. Preços, condições e disponibilidade sujeitos a alteração sem aviso prévio e à confirmação do vendedor.</p>
+      <p id="rodapeData"></p>
+    </div>
+  </footer>
+
+  <!-- Detalhe do produto -->
+  <dialog class="modal" id="modalProd" aria-label="Detalhes do produto"></dialog>
+
+  <!-- Filtros no celular -->
+  <dialog class="folha-baixo" id="modalFiltros" aria-label="Filtros">
+    <div class="folha-cab"><h2>Filtros</h2><button class="fechar" type="button" data-fechar aria-label="Fechar">×</button></div>
+    <div class="folha-corpo">
+      <label class="troca"><input type="checkbox" id="mPromo"><span class="trilho-troca"></span> Somente promoções</label>
+      <label class="troca"><input type="checkbox" id="mDisp"><span class="trilho-troca"></span> Somente disponíveis</label>
+      <button class="btn btn-escuro largo" type="button" data-fechar>Ver produtos</button>
+    </div>
+  </dialog>
+
+  <!-- Lista de orçamento -->
+  <dialog class="gaveta" id="gaveta" aria-label="Lista de orçamento">
+    <div class="gaveta-in">
+      <div class="gaveta-cab">
+        <div><h2>Lista de orçamento</h2><p id="listaResumo">Nenhum item</p></div>
+        <button class="fechar" type="button" data-fechar aria-label="Fechar">×</button>
+      </div>
+      <div class="gaveta-lista" id="itens"></div>
+      <div class="gaveta-pe" id="gavetaPe">
+        <div class="totais">
+          <div><span>Total estimado</span><strong id="total">R$ 0,00</strong></div>
+          <p>Valores de tabela, sem descontos de campanha. Preços e disponibilidade são confirmados pelo vendedor.</p>
+        </div>
+        <details class="dados-cli">
+          <summary>Seus dados <span>(opcional)</span></summary>
+          <div class="campos">
+            <label>Nome<input id="cNome" autocomplete="name"></label>
+            <label>Empresa<input id="cEmpresa" autocomplete="organization"></label>
+            <label>CNPJ<input id="cCnpj" inputmode="numeric"></label>
+            <label>Cidade / UF<input id="cCidade" autocomplete="address-level2"></label>
+            <label class="inteiro">Observações<textarea id="cObs" rows="2"></textarea></label>
+          </div>
+        </details>
+        <p class="para" id="paraConsultor"></p>
+        <div class="acoes-lista">
+          <button class="btn btn-escuro" type="button" id="compartilhar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16a3 3 0 0 0-2.4 1.2l-6.7-3.4a3 3 0 0 0 0-1.6l6.7-3.4A3 3 0 1 0 15 7c0 .3 0 .5.1.8L8.4 11.2a3 3 0 1 0 0 3.6l6.7 3.4A3 3 0 1 0 18 16z"/></svg>
+            Enviar lista ao vendedor
+          </button>
+          <div class="acoes-sec">
+            <button class="btn btn-linha-escura" type="button" id="copiar">Copiar texto</button>
+            <button class="btn btn-linha-escura" type="button" id="baixarPdf">Baixar PDF</button>
+          </div>
+          <button class="btn-texto" type="button" id="limpar">Limpar lista</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="impressao" id="impressao" aria-hidden="true"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/demo-api.js"></script>
+
+  <script src="config.js?v=202610201641"></script>
+  <script src="dados/dados-locais.js?v=202610201641"></script>
+  <script src="assets/comum.js?v=202610201641"></script>
+  <script src="assets/site.js?v=202610201641"></script>
+</body>
+</html>
