@@ -294,41 +294,64 @@
     medirFotos();
     const pendencias = PENDENCIAS.map(([k, rot, dica]) => ({ k, rot, dica, n: conta(k) })).filter(x => x.n);
     const s = n => (n === 1 ? '' : 's');
-    const tituloStatus = !E.pendente ? 'Tudo publicado'
-      : pend ? `${pend} produto${s(pend)} alterado${s(pend)} ainda não publicado${s(pend)}` : 'Há alterações ainda não publicadas';
+    const cats = new Set(P.filter(p => p.ativo !== false).map(p => p.categoria)).size;
+    const quando = E.publicadoEm ? E.publicadoEm.replace(' às ', ', às ') : '';
+    const h = new Date().getHours(), primeiro = E.quem && !E.quem.principal ? ' ' + String(E.quem.nome).split(' ')[0] : '';
+    $('#iniTitulo').textContent = (h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite') + primeiro;
+    const capas = [E.config.promoAtiva && E.config.pdfPromo !== false ? (E.config.capaPromoPdf || 'img/capa-promo.webp') : '', E.config.capaPdf || 'img/capa.webp'].filter(Boolean);
     el.innerHTML = `
-      <div class="ini-status ${E.pendente ? 'pendente' : 'ok'}">
-        <div><b>${tituloStatus}</b>
-        <small>${E.publicadoEm ? 'Última publicação: ' + esc(E.publicadoEm) + '.' : 'O catálogo ainda não foi publicado.'} Os clientes só veem as mudanças depois de publicar.</small></div>
-        ${E.pendente ? '<button class="btn btn-laranja" type="button" data-ini="publicar">Revisar e publicar</button>' : ''}
+      <div class="ini-hero">
+        <div class="ini-capas c${capas.length}">${capas.map(c => `<img src="${esc(fotoUrl(c))}" alt="" loading="lazy">`).join('')}</div>
+        <div class="ini-hero-txt">
+          <h2>${!E.publicadoEm ? 'O catálogo ainda não foi publicado' : E.pendente ? (pend ? `${pend} produto${s(pend)} esperando publicação` : 'Há alterações esperando publicação') : 'Tudo publicado'}</h2>
+          <p>${E.publicadoEm ? `No ar desde ${esc(quando)}: os clientes veem ${visiveis} produtos disponíveis em ${cats} categorias.` : 'Confira os produtos e clique em Publicar.'}${E.pendente ? ' As mudanças só aparecem para o cliente depois de publicar.' : ''}</p>
+        </div>
+        <div class="ini-hero-acoes">
+          ${E.pendente ? '<button class="btn btn-laranja" type="button" data-ini="publicar">Revisar e publicar</button>' : ''}
+          <button class="btn btn-claro" type="button" data-ini="pdf">Gerar PDF</button>
+        </div>
       </div>
       ${diasBackup > 7 ? `<div class="ini-aviso"><div><b>${ultBackup ? 'Faz mais de uma semana desde o último backup' : 'Você ainda não baixou nenhum backup'}</b><small>O catálogo fica só neste computador. Guarde uma cópia num pendrive ou no Google Drive.</small></div><button class="btn btn-claro" type="button" data-ini="backup">Baixar backup agora</button></div>` : ''}
       <div class="ini-tiles">${tiles.map(([k, rot, n, cl]) => `<button type="button" class="ini-tile ${cl}" data-sit-ini="${k}"><span>${rot}</span><b>${n}</b></button>`).join('')}</div>
-      <div class="ini-grade">
-        <div class="cartao">
-          <h2>Atalhos</h2>
-          <div class="ini-atalhos">
-            <button type="button" data-ini="precos"><b>Atualizar preços</b><small>Print do chefe ou texto colado</small></button>
-            <button type="button" data-ini="pdf"><b>Gerar PDF</b><small>Tabela completa ou de novidades</small></button>
-            <button type="button" data-ini="lote"><b>Fotos em lote</b><small>O nome do arquivo é o código</small></button>
-            <button type="button" data-ini="novo"><b>Novo produto</b><small>Cadastrar um produto</small></button>
-            <button type="button" data-ini="resumo"><b>Resumo para o chefe</b><small>O que mudou no período, em PDF</small></button>
-            <button type="button" data-ini="buscar"><b>Buscar</b><small>Produto ou tela · Ctrl K</small></button>
-          </div>
+      <div class="ini-dupla">
+        <div class="cartao ini-mudancas">
+          <h2>O que mudou desde a última publicação</h2>
+          <div id="iniMudancas"><p class="dica">Comparando com a versão publicada…</p></div>
         </div>
         <div class="cartao ini-pend">
-          <h2>Pendências <span class="ini-pend-n">${pendencias.length ? pendencias.reduce((s, x) => s + x.n, 0) : ''}</span></h2>
+          <h2>Precisa de atenção <span class="ini-pend-n">${pendencias.length ? pendencias.reduce((s, x) => s + x.n, 0) : ''}</span></h2>
           ${pendencias.length
             ? `<ul class="pend-lista">${pendencias.map(x => `<li><button type="button" data-sit-ini="${x.k}"><span><b>${x.rot}</b><small>${x.dica}</small></span><em>${x.n}</em></button></li>`).join('')}</ul>`
             : '<p class="dica">Nada pendente. Os produtos estão completos.</p>'}
         </div>
-        <div class="cartao">
-          <h2>Alterados desde a última publicação</h2>
-          ${mudados.length
-            ? `<ul class="ini-mudados">${mudados.map(p => `<li><button type="button" data-editar-ini="${P.indexOf(p)}"><b>${esc(p.codigo)}</b> ${esc(A.bonito(p.nome))}</button></li>`).join('')}</ul>${pend > mudados.length ? `<button type="button" class="btn-texto" data-sit-ini="alterados">Ver todos os ${pend}</button>` : ''}`
-            : '<p class="dica">Nenhum produto alterado.</p>'}
-        </div>
+      </div>
+      <div class="ini-atalhos-faixa" aria-label="Atalhos">
+        <button type="button" data-ini="precos"><b>Atualizar preços</b><small>Print ou texto</small></button>
+        <button type="button" data-ini="lote"><b>Fotos em lote</b><small>Nome = código</small></button>
+        <button type="button" data-ini="novo"><b>Novo produto</b><small>Cadastrar</small></button>
+        <button type="button" data-ini="resumo"><b>Resumo para o chefe</b><small>O que mudou, em PDF</small></button>
+        <button type="button" data-ini="buscar"><b>Buscar</b><small>Ctrl K</small></button>
       </div>`;
+    desenharMudancas(mudados);
+  }
+  // lista do que mudou, comparando com a última publicação (preço antigo → novo, esgotou, voltou…)
+  async function desenharMudancas() {
+    const alvo = () => $('#iniMudancas');
+    const base = await baseUltimaPublicacao();
+    if (!alvo()) return;
+    if (!base) { alvo().innerHTML = '<p class="dica">Não consegui ler a versão publicada agora.</p>'; return; }
+    const d = compararVersoes(base, E.produtos);
+    const itens = [
+      ...d.precos.map(x => ({ p: x.p, t: `Preço <span class="mud-v ${x.para != null && x.de != null && x.para < x.de ? 'desce' : 'sobe'}">${x.de == null ? '—' : brl(x.de)} → ${x.para == null ? '—' : brl(x.para)}</span>` })),
+      ...d.esgotaram.map(p => ({ p, t: 'Vai aparecer como <b>esgotado</b>' })),
+      ...d.voltaram.map(p => ({ p, t: '<b>Volta ao estoque</b>' })),
+      ...d.novos.map(p => ({ p, t: '<b>Produto novo</b>' })),
+      ...d.removidos.map(p => ({ p, t: '<b>Sai do catálogo</b>', fora: true })),
+      ...d.outros.map(p => ({ p, t: 'Nome, fotos ou especificações' })),
+    ];
+    if (!itens.length) { alvo().innerHTML = E.pendente ? '<p class="dica">Nenhum preço ou produto mudou; o que falta publicar é a ordem dos produtos ou configurações (capas, textos, promoção).</p>' : '<p class="dica">Nenhuma mudança. O que está no painel é o que o cliente vê.</p>'; return; }
+    const MAX = 7;
+    alvo().innerHTML = `<ul class="mud-lista">${itens.slice(0, MAX).map(x => { const i = E.produtos.indexOf(x.p); const f = (x.p.fotos || [])[0]; return `<li><button type="button" ${i >= 0 ? `data-editar-ini="${i}"` : 'disabled'}><span class="mini">${f ? `<img src="${esc(miniUrl(f))}" alt="" loading="lazy">` : ''}</span><span class="mud-txt"><b>${esc(x.p.codigo)}</b> ${esc(A.bonito(x.p.nome))}<small>${x.t}</small></span></button></li>`; }).join('')}</ul>${itens.length > MAX ? `<button type="button" class="btn-texto" data-sit-ini="alterados">Ver todas as ${itens.length} mudanças</button>` : ''}`;
   }
   $('#inicio').addEventListener('click', e => {
     const t = e.target.closest('[data-sit-ini]');
@@ -1091,6 +1114,66 @@
   $('#orgPdf').addEventListener('click', () => { if (org.mudou) toast('Salve a ordem antes de gerar o PDF.', true); else { $('#organizar').close(); $('#btnPdf').click(); } });
   $('#btnOrganizar').addEventListener('click', () => abrirOrdemProdutos(''));
 
+  // ================= lista: situação em selos + menu "⋯" + densidade =================
+  const ICO_ESTRELA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/></svg>';
+  function selosSituacao(p) {
+    const s = [];
+    if (p.esgotado) s.push('<span class="selo s-esg">Esgotado</span>');
+    if (p.ativo === false) s.push('<span class="selo s-oculto">Oculto</span>');
+    const promo = p.promo != null && p.promo !== '' && +p.promo < +p.preco;
+    if (promo && !p.esgotado) s.push(`<span class="selo s-promo${A.promoNoPrazo(p.promoDe, p.promoAte) ? '' : ' fora'}" title="${A.promoNoPrazo(p.promoDe, p.promoAte) ? 'Promoção valendo' : 'Promoção fora do prazo'}">−${Math.round((1 - p.promo / p.preco) * 100)}%</span>`);
+    if (p.destaque) s.push(`<span class="selo s-dest">${ICO_ESTRELA}Destaque</span>`);
+    if (poucas(p)) s.push('<span class="selo s-poucas">Últimas un.</span>');
+    return s.length ? `<div class="selos">${s.join('')}</div>` : '<span class="s-ok">Disponível</span>';
+  }
+  let menuLinha = null;
+  function fecharMenuLinha() { if (menuLinha) { menuLinha.remove(); menuLinha = null; } }
+  function abrirMenuLinha(i, btn) {
+    fecharMenuLinha();
+    const p = E.produtos[i];
+    const m = document.createElement('div');
+    m.className = 'menu-linha'; m.setAttribute('role', 'menu');
+    const item = (campo, rot, on) => `<button type="button" role="menuitemcheckbox" aria-checked="${on}" data-alternar="${campo}"><span class="ml-check" aria-hidden="true">${on ? '✓' : ''}</span>${rot}</button>`;
+    m.innerHTML = item('esgotado', 'Esgotado', !!p.esgotado) + item('ativo', 'Visível no catálogo', p.ativo !== false) + item('destaque', 'Destaque', !!p.destaque)
+      + '<hr><button type="button" role="menuitem" data-ml="editar">Editar produto</button><button type="button" role="menuitem" data-ml="organizar">Posição na tabela</button>';
+    document.body.appendChild(m);
+    const r = btn.getBoundingClientRect();
+    const alto = m.offsetHeight;
+    m.style.left = Math.max(8, r.right - m.offsetWidth) + 'px';
+    m.style.top = (r.bottom + 6 + alto > innerHeight ? r.top - alto - 6 : r.bottom + 6) + 'px';
+    menuLinha = m;
+    m.querySelector('button').focus();
+    m.addEventListener('click', e => {
+      const a = e.target.closest('[data-alternar]'), o = e.target.closest('[data-ml]');
+      if (a) {
+        const campo = a.dataset.alternar;
+        lembrar(`${p.codigo}: ${({ esgotado: 'esgotado', ativo: 'visível', destaque: 'destaque' })[campo]}`);
+        p[campo] = campo === 'ativo' ? p.ativo === false : !p[campo];
+        fecharMenuLinha();
+        alterado([p.codigo]);
+        desenharProdutos();
+        requestAnimationFrame(() => { const tr = $(`#linhas tr[data-i="${i}"]`); if (tr) { tr.classList.add('acendeu'); requestAnimationFrame(() => requestAnimationFrame(() => tr.classList.remove('acendeu'))); } });
+      }
+      if (o) { fecharMenuLinha(); if (o.dataset.ml === 'editar') abrirEditor(i); else { irPara('categorias'); abrirOrdemProdutos(p.categoria); } }
+    });
+    m.addEventListener('keydown', e => {
+      const bs = [...m.querySelectorAll('button')], k = bs.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); bs[(k + 1) % bs.length].focus(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); bs[(k - 1 + bs.length) % bs.length].focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); fecharMenuLinha(); btn.focus(); }
+    });
+  }
+  $('#linhas').addEventListener('click', e => { const b = e.target.closest('[data-mais]'); if (b) { e.stopPropagation(); menuLinha && menuLinha.dataset.de === b.dataset.mais ? fecharMenuLinha() : (abrirMenuLinha(+b.dataset.mais, b), menuLinha.dataset.de = b.dataset.mais); } });
+  document.addEventListener('click', e => { if (menuLinha && !menuLinha.contains(e.target)) fecharMenuLinha(); });
+  addEventListener('scroll', fecharMenuLinha, true);
+  // densidade da lista (lembrada neste computador)
+  function aplicarDensidade(d) {
+    document.body.classList.toggle('dens-compacta', d === 'comp');
+    $$('.seg-dens [data-dens]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.dens === d)));
+  }
+  aplicarDensidade(guarda.ler('aiker-densidade') || 'conf');
+  $$('.seg-dens [data-dens]').forEach(b => b.addEventListener('click', () => { guarda.gravar('aiker-densidade', b.dataset.dens); aplicarDensidade(b.dataset.dens); }));
+
   // ================= navegação =================
   $('#menu').addEventListener('click', e => {
     const b = e.target.closest('[data-aba]');
@@ -1383,7 +1466,7 @@
     desenharSegmentos();
     [...sel].forEach(c => { if (!E.produtos.some(p => p.codigo === c)) sel.delete(c); });
     if (!l.length) {
-      $('#linhas').innerHTML = `<tr><td colspan="12"><div class="vazio"><strong>Nenhum produto aqui</strong><span>${$('#fBusca').value ? 'Confira o código ou tente outra palavra.' : 'Escolha outra situação ou categoria acima.'}</span></div></td></tr>`;
+      $('#linhas').innerHTML = `<tr><td colspan="10"><div class="vazio"><strong>Nenhum produto aqui</strong><span>${$('#fBusca').value ? 'Confira o código ou tente outra palavra.' : 'Escolha outra situação ou categoria acima.'}</span></div></td></tr>`;
       atualizarMassa();
       return;
     }
@@ -1391,7 +1474,7 @@
     const agrupar = !$('#fBusca').value && !$('#fCat').value && !ordem.col;
     const partes = l.map(({ p, i }) => {
       let g = '';
-      if (agrupar && p.categoria !== ultimaCat) { ultimaCat = p.categoria; g = `<tr class="grupo"><td colspan="12">${esc(p.categoria || 'Sem categoria')}</td></tr>`; }
+      if (agrupar && p.categoria !== ultimaCat) { ultimaCat = p.categoria; g = `<tr class="grupo"><td colspan="10">${esc(p.categoria || 'Sem categoria')}<small>${E.produtos.filter(x => x.categoria === p.categoria).length} produtos</small></td></tr>`; }
       const f = (p.fotos || [])[0];
       const marcado = sel.has(p.codigo);
       const nf = (p.fotos || []).length, ns = (p.specs || []).length;
@@ -1404,10 +1487,8 @@
         <td class="c-num c-pp"><input data-campo="promo" value="${fmt(p.promo)}" data-orig="${fmt(p.promo)}" inputmode="decimal" placeholder="—" aria-label="Preço promocional de ${esc(p.codigo)}"></td>
         <td class="c-num c-cx"><input class="pcs" data-campo="pcs" value="${esc(p.pcs)}" data-orig="${esc(p.pcs)}" aria-label="Peças por caixa de ${esc(p.codigo)}"></td>
         <td class="c-num c-vcx"><span class="vcx">${valorCaixa(p)}</span></td>
-        <td class="c-tog"><label class="troca" title="Esgotado" data-rot="Esgotado"><input type="checkbox" data-campo="esgotado" ${p.esgotado ? 'checked' : ''}><span class="trilho"></span></label></td>
-        <td class="c-tog"><label class="troca" title="Visível no catálogo" data-rot="Visível"><input type="checkbox" data-campo="ativo" ${p.ativo !== false ? 'checked' : ''}><span class="trilho"></span></label></td>
-        <td class="c-tog"><label class="troca" title="Destaque" data-rot="Destaque"><input type="checkbox" data-campo="destaque" ${p.destaque ? 'checked' : ''}><span class="trilho"></span></label></td>
-        <td class="c-acao"><button class="btn btn-claro btn-ico" type="button" data-editar="${i}" title="Editar ${esc(p.codigo)}" aria-label="Editar ${esc(p.codigo)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.2V20h2.8L17 9.8 14.2 7 4 17.2zM19.7 7.1a1 1 0 0 0 0-1.4l-1.4-1.4a1 1 0 0 0-1.4 0L15.6 5.6 18.4 8.4l1.3-1.3z"/></svg></button></td>
+        <td class="c-sit">${selosSituacao(p)}</td>
+        <td class="c-acao"><div class="acoes-linha"><button class="btn-mais" type="button" data-mais="${i}" aria-haspopup="menu" aria-label="Esgotado, visível e destaque de ${esc(p.codigo)}" title="Esgotado, visível, destaque"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg></button><button class="btn btn-claro btn-ico" type="button" data-editar="${i}" title="Editar ${esc(p.codigo)}" aria-label="Editar ${esc(p.codigo)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.2V20h2.8L17 9.8 14.2 7 4 17.2zM19.7 7.1a1 1 0 0 0 0-1.4l-1.4-1.4a1 1 0 0 0-1.4 0L15.6 5.6 18.4 8.4l1.3-1.3z"/></svg></button></div></td>
       </tr>`;
     });
     pintarLinhas(partes);
@@ -2578,14 +2659,26 @@ ${urlCatalogo()}`;
     } catch (e) { return null; }
   }
 
+  // produtos como estavam na última publicação (cópia completa guardada ao publicar)
+  let baseCache = null;
+  async function baseUltimaPublicacao() {
+    if (baseCache && baseCache.publicadoEm === E.publicadoEm) return baseCache.produtos;
+    try {
+      const c = ((await api('copias')).copias || []).find(x => x.motivo === 'publicacao' && x.igualAoAtual) || null;
+      if (c) { const k = await api('copia', { id: c.id }); if (k.rascunho && Array.isArray(k.rascunho.produtos)) { baseCache = { publicadoEm: E.publicadoEm, produtos: k.rascunho.produtos }; return baseCache.produtos; } }
+    } catch (e) { /* segue com o publicado */ }
+    const pub = await versaoPublicada();
+    return pub ? pub.produtos : null;
+  }
   function compararVersoes(antes, depois) {
     const vis = l => (l || []).filter(p => p && p.codigo && p.ativo !== false);
     const mapa = new Map(vis(antes).map(p => [norm(p.codigo), p]));
+    const temAnonimos = vis(antes).some(p => p.anonimo);
     const d = { novos: [], removidos: [], precos: [], esgotaram: [], voltaram: [], outros: [] };
     const atuais = vis(depois);
     atuais.forEach(p => {
       const a = mapa.get(norm(p.codigo));
-      if (!a) { d.novos.push(p); return; }
+      if (!a) { if (!(p.esgotado && temAnonimos)) d.novos.push(p); return; }
       const un = x => (x.promo != null && x.promo !== '' && x.promo < x.preco ? x.promo : x.preco);
       if ((un(a) ?? -1) !== (un(p) ?? -1)) d.precos.push({ p, de: un(a), para: un(p) });
       if (!a.esgotado && p.esgotado) d.esgotaram.push(p);
@@ -2594,7 +2687,7 @@ ${urlCatalogo()}`;
       if (resto(a) !== resto(p) && !d.precos.some(x => x.p === p)) d.outros.push(p);
     });
     const codAtuais = new Set(atuais.map(p => norm(p.codigo)));
-    vis(antes).forEach(p => { if (!codAtuais.has(norm(p.codigo))) d.removidos.push(p); });
+    vis(antes).forEach(p => { if (!p.anonimo && !codAtuais.has(norm(p.codigo))) d.removidos.push(p); });
     return d;
   }
 
@@ -2609,7 +2702,8 @@ ${urlCatalogo()}`;
     clearTimeout(tSalvar);
     if ($('#status').classList.contains('salvando') || salvando) await salvar();
     const m = modal('<h2>Revisar e publicar</h2><p class="carregando-txt">Comparando com a versão que os clientes veem agora…</p>');
-    const pub = await versaoPublicada();
+    const baseProd = await baseUltimaPublicacao();
+    const pub = baseProd ? { produtos: baseProd } : null;
     const avisos = [];
     const vistos = new Map();
     E.produtos.forEach(p => {

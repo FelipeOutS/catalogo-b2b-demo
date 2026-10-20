@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/admin.css?v=202610201641">
+  <link rel="stylesheet" href="assets/admin.css?v=202610201750">
   <style>.demo-aviso{margin:6px 0 12px;padding:8px 12px;border-radius:10px;background:#fff3ec;color:#a8401c;font-size:13px}</style>
 </head>
 <body>
@@ -46,6 +46,7 @@
 
     <nav class="menu" id="menu" aria-label="Menu do painel">
       <span class="menu-ind" id="menuInd" aria-hidden="true"></span>
+      <div class="menu-logo"><img class="ml-grande" src="img/logo-branco.png" alt="aiker"><img class="ml-icone" src="img/icone.png" alt="aiker"><span>Admin</span></div>
       <div class="menu-grupo">
         <p class="menu-rot">Catálogo</p>
         <button type="button" data-aba="inicio" class="on" title="Início">
@@ -82,7 +83,7 @@
     <main class="conteudo">
       <!-- INÍCIO -->
       <section class="aba" id="aba-inicio">
-        <div class="cab"><div><h1>Início</h1><p>Resumo do catálogo e atalhos do dia a dia.</p></div></div>
+        <div class="cab"><div><h1 id="iniTitulo">Início</h1><p>O que está no ar e o que precisa da sua atenção.</p></div></div>
         <div id="inicio"></div>
       </section>
 
@@ -106,13 +107,14 @@
           <label class="busca"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.25 4.24-1.42 1.42-4.24-4.25A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg>
             <input type="search" id="fBusca" placeholder="Buscar código, nome ou especificação" aria-label="Buscar produtos"><kbd>/</kbd></label>
           <select id="fCat" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+          <div class="seg-dens" role="group" aria-label="Densidade da lista"><button type="button" data-dens="conf" aria-pressed="true">Confortável</button><button type="button" data-dens="comp" aria-pressed="false">Compacta</button></div>
         </div>
         <div class="tabela-wrap">
           <table class="tabela" id="tabela">
             <thead><tr>
               <th class="c-sel"><input type="checkbox" id="selTodos" aria-label="Selecionar todos os produtos visíveis"></th>
               <th class="c-foto"></th><th aria-sort="none"><button type="button" class="th-ord" data-ord="codigo">Código</button></th><th aria-sort="none"><button type="button" class="th-ord" data-ord="nome">Produto</button></th><th class="c-num" aria-sort="none"><button type="button" class="th-ord" data-ord="preco">Preço un.</button></th><th class="c-num" aria-sort="none"><button type="button" class="th-ord" data-ord="promo">Promoção</button></th><th class="c-num" aria-sort="none"><button type="button" class="th-ord" data-ord="pcs">Pç/cx</button></th><th class="c-num c-vcx" aria-sort="none"><button type="button" class="th-ord" data-ord="vcx">Valor caixa</button></th>
-              <th class="c-tog">Esgotado</th><th class="c-tog">Visível</th><th class="c-tog">Destaque</th><th class="c-acao"></th>
+              <th class="c-sit">Situação</th><th class="c-acao"></th>
             </tr></thead>
             <tbody id="linhas"></tbody>
           </table>
@@ -446,8 +448,8 @@
 
   <script src="assets/demo-api.js"></script>
 
-  <script src="config.js?v=202610201641"></script>
-  <script src="assets/comum.js?v=202610201641"></script>
-  <script src="assets/admin.js?v=202610201641"></script>
+  <script src="config.js?v=202610201750"></script>
+  <script src="assets/comum.js?v=202610201750"></script>
+  <script src="assets/admin.js?v=202610201750"></script>
 </body>
 </html>
