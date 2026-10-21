@@ -181,8 +181,6 @@ h1, h2, h3 { letter-spacing: -.02em; }
 dialog { border: 0; padding: 0; color: inherit; background: #fff; }
 dialog::backdrop { background: rgba(15, 14, 14, .5); }
 .gaveta { margin: 0 0 0 auto; width: min(640px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; }
-.gaveta[open] { animation: entra .3s var(--ease); }
-@keyframes entra { from { transform: translateX(30px); opacity: 0; } }
 .ed { height: 100%; display: flex; flex-direction: column; }
 .ed-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 24px 16px; border-bottom: 1px solid var(--linha); }
 .ed-cab h2 { margin: 2px 0 0; font-size: 19px; }
@@ -217,8 +215,6 @@ dialog::backdrop { background: rgba(15, 14, 14, .5); }
 
 /* modal genérico */
 .modal { width: min(560px, calc(100vw - 32px)); border-radius: 10px; padding: 26px; max-height: calc(100dvh - 32px); overflow: auto; }
-.modal[open] { animation: aparece .25s var(--ease); }
-@keyframes aparece { from { transform: translateY(10px); opacity: 0; } }
 .modal h2 { margin: 0 0 8px; font-size: 20px; }
 .modal p { color: var(--suave); margin: 0 0 14px; }
 .modal ul { margin: 0 0 16px; padding-left: 18px; color: var(--grafite); max-height: 220px; overflow: auto; }
@@ -347,8 +343,6 @@ h1 { text-wrap: balance; }
 
 /* revisão antes de publicar */
 .modal { width: min(640px, calc(100vw - 32px)); }
-.modal[open] { animation: aparece .2s var(--ease-out); }
-@keyframes aparece { from { transform: translateY(6px) scale(.985); opacity: 0; } }
 .carregando-txt { animation: pisca 1.2s ease infinite; }
 .mudancas { display: grid; gap: 8px; margin-bottom: 8px; max-height: 46dvh; overflow: auto; }
 .mud { border: 1px solid var(--linha); border-radius: 8px; background: #fff; }
@@ -374,7 +368,7 @@ h1 { text-wrap: balance; }
 .status { font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .massa, .massa[hidden], .modal[open], .btn, .segmentos button { transition: none !important; animation: none !important; }
+  .massa, .massa[hidden], .btn, .segmentos button { transition: none !important; animation: none !important; }
 }
 dialog:focus, dialog:focus-visible { outline: none; }
 .nome { min-width: 220px; }
@@ -737,14 +731,9 @@ tr.estranho td .chip { margin-top: 4px; display: inline-block; }
 /* status do topo: o ponto pulsa uma vez quando salva */
 .status.ok i { animation: salvo .6s var(--ease-out) 1; }
 @keyframes salvo { 0% { transform: scale(1); } 40% { transform: scale(1.8); } 100% { transform: scale(1); } }
-/* gaveta do editor: desliza da direita com a curva de gaveta */
-.gaveta[open] { animation: gavetaEntra .32s var(--ease-drawer); }
-@keyframes gavetaEntra { from { transform: translateX(48px); opacity: 0; } }
-dialog[open]::backdrop { animation: fundoEntra .2s ease; }
-@keyframes fundoEntra { from { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .aba.entra, .status.ok i, .gaveta[open], dialog[open]::backdrop { animation: none !important; }
+  .aba.entra, .status.ok i { animation: none !important; }
   .menu-ind, .trilho::after, .tabela tr td { transition: none !important; }
 }
 .menu .menu-sair { display: inline; width: auto; padding: 0; gap: 0; border-radius: 0; font-size: 12.5px; font-weight: 500; color: var(--suave); }
@@ -839,7 +828,7 @@ dialog[open]::backdrop { animation: fundoEntra .2s ease; }
 
 /* ================= organizar tabela ================= */
 .organizar { width: min(1180px, calc(100vw - 32px)); height: calc(100dvh - 32px); max-height: none; margin: auto; padding: 0; border-radius: 12px; display: none; flex-direction: column; overflow: hidden; }
-.organizar[open] { display: flex; animation: aparece .2s var(--ease-out); }
+.organizar[open] { display: flex; }
 .org-topo { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 18px 22px 14px; border-bottom: 1px solid var(--linha-2); }
 .org-topo h2 { margin: 0; font-size: 19px; }
 .org-topo p { margin: 2px 0 0; color: var(--suave); font-size: 13px; }
@@ -874,7 +863,6 @@ dialog[open]::backdrop { animation: fundoEntra .2s ease; }
 .org-nl:hover { background: var(--tile); color: var(--texto); }
 .org-nl[aria-pressed="true"] { background: var(--laranja-suave); color: var(--laranja-esc); }
 @media (max-width: 760px) { .org-acoes { margin-left: 0; width: 100%; } .org-acoes .btn { flex: 1; } .org-grade { gap: 6px; } .org-card { grid-template-columns: 1fr; padding-bottom: 28px; } .org-foto { width: 100%; height: 64px; } }
-@media (prefers-reduced-motion: reduce) { .organizar[open] { animation: none; } }
 
 /* organizar: casas vazias recebem produto; remover espaço */
 .org-branco { position: relative; }
@@ -1038,3 +1026,33 @@ body.dens-compacta .tabela .nome small { display: none; }
 @keyframes gira { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .girando { animation-duration: 2.4s; } }
 #paPrevia code { word-break: break-all; }
+
+/* ================= movimento das janelas (igual em todo o sistema) =================
+   Entram com desaceleração e saem mais rápido; o fundo escurece junto.
+   Navegadores antigos simplesmente abrem e fecham sem animação. */
+dialog {
+  opacity: 0;
+  transform: translateY(6px) scale(.985);
+  transition: opacity .16s cubic-bezier(.4, 0, 1, 1), transform .16s cubic-bezier(.4, 0, 1, 1), overlay .16s allow-discrete, display .16s allow-discrete;
+}
+dialog[open] {
+  opacity: 1;
+  transform: none;
+  transition-duration: .26s;
+  transition-timing-function: cubic-bezier(.16, 1, .3, 1);
+}
+@starting-style { dialog[open] { opacity: 0; transform: translateY(10px) scale(.985); } }
+.gaveta:not([open]) { transform: translateX(28px); }
+@starting-style { .gaveta[open] { transform: translateX(44px); } }
+.gaveta[open] { transition-duration: .32s; transition-timing-function: cubic-bezier(.32, .72, 0, 1); }
+dialog::backdrop {
+  background-color: rgba(15, 14, 14, 0);
+  transition: background-color .16s ease-in, overlay .16s allow-discrete, display .16s allow-discrete;
+}
+dialog[open]::backdrop { background-color: rgba(15, 14, 14, .5); transition-duration: .26s; }
+@starting-style { dialog[open]::backdrop { background-color: rgba(15, 14, 14, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  /* sem deslocamento: só o esmaecer, que continua mostrando que a janela abriu ou fechou */
+  dialog, dialog[open] { transform: none !important; }
+}
+.paleta[open]::backdrop { background-color: rgba(15, 14, 14, .35); }

@@ -133,6 +133,10 @@
 
   // ================= filtros =================
   let tBusca;
+  // no celular o texto da busca precisa caber inteiro
+  const buscaCurta = matchMedia('(max-width: 640px)');
+  const ajustarBusca = () => { $('#busca').placeholder = buscaCurta.matches ? 'Buscar código ou produto' : 'Buscar por código, produto ou característica'; };
+  ajustarBusca(); buscaCurta.addEventListener('change', ajustarBusca);
   $('#busca').addEventListener('input', e => {
     clearTimeout(tBusca);
     tBusca = setTimeout(() => {

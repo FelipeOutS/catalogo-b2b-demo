@@ -2,6 +2,19 @@
 (function () {
   const CFG = window.AIKER_CONFIG || { planilha: {} };
 
+  // Janela aberta com o mouse: o foco fica na própria janela, sem acender o contorno de teclado no botão "fechar".
+  // Aberta pelo teclado, continua no primeiro botão (quem navega com Tab precisa saber onde está).
+  let viaTeclado = false;
+  addEventListener('keydown', e => { if (!e.ctrlKey && !e.metaKey) viaTeclado = true; }, true);
+  addEventListener('pointerdown', () => { viaTeclado = false; }, true);
+  if (window.HTMLDialogElement) {
+    const abrirJanela = HTMLDialogElement.prototype.showModal;
+    HTMLDialogElement.prototype.showModal = function () {
+      abrirJanela.call(this);
+      if (!viaTeclado && !this.querySelector('[autofocus]')) { this.tabIndex = -1; this.focus({ preventScroll: true }); }
+    };
+  }
+
   // ---------- CSV ----------
   function parseCSV(text) {
     const rows = [];

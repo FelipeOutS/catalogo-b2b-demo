@@ -1756,7 +1756,8 @@
     $('#edTitulo').textContent = i >= 0 ? A.bonito(p.nome) || p.codigo : 'Novo produto';
     $('#eCodigo').value = p.codigo || '';
     $('#eCategoria').value = p.categoria || '';
-    $('#eNome').value = p.nome || '';
+    // mostra o nome como ele aparece no catálogo e no PDF (a planilha antiga veio toda em maiúsculas)
+    $('#eNome').value = A.bonito(p.nome || '');
     $('#ePreco').value = fmt(p.preco);
     $('#ePromo').value = fmt(p.promo);
     $('#ePcs').value = p.pcs || '';
@@ -1909,7 +1910,9 @@
   $('#formEd').addEventListener('submit', e => {
     e.preventDefault();
     const codigo = $('#eCodigo').value.trim();
-    const nome = $('#eNome').value.trim();
+    let nome = $('#eNome').value.trim();
+    // nome igual ao de antes (só mudou maiúscula/minúscula na tela): guarda como estava, para não virar uma "alteração" na revisão
+    if (edIdx >= 0 && A.bonito(nome) === A.bonito(E.produtos[edIdx].nome || '')) nome = E.produtos[edIdx].nome;
     const categoria = $('#eCategoria').value.trim();
     if (!codigo || !nome || !categoria) { toast('Preencha código, nome e categoria.', true); return; }
     const dup = E.produtos.findIndex((p, k) => k !== edIdx && norm(p.codigo) === norm(codigo));
@@ -1923,7 +1926,13 @@
       esgotado: $('#eEsgotado').checked, ativo: $('#eAtivo').checked, destaque: $('#eDestaque').checked,
       specs: lerSpecs(), fotos: edFotos.slice(),
     };
-    if (antes) E.produtos[edIdx] = p;
+    if (antes) {
+      // nada mudou de verdade (só maiúsculas na tela, ou campos vazios): guarda como estava, sem criar "alteração" na revisão
+      if (norm(JSON.stringify(p.specs)) === norm(JSON.stringify(antes.specs || []))) p.specs = antes.specs || [];
+      ['estoque', 'promoDe', 'promoAte'].forEach(k => { if ((p[k] == null || p[k] === '') && !(k in antes)) delete p[k]; });
+      // mantém o que o editor não mostra (nova linha e espaços do Organizar tabela, por exemplo)
+      E.produtos[edIdx] = Object.assign({}, antes, p);
+    }
     else {
       // novo: entra no fim da categoria escolhida
       let pos = -1;

@@ -89,8 +89,8 @@ svg { width: 1em; height: 1em; fill: currentColor; flex: none; }
 .numeros dt { font-size: 13px; color: #948c88; margin-top: 2px; }
 .numeros dd { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
 .hero-midia { position: relative; align-self: stretch; }
-.hero-midia img { position: absolute; inset: -4% -10% -2% 0; width: 110%; height: 106%; object-fit: cover; object-position: 50% 50%; -webkit-mask-image: radial-gradient(75% 70% at 55% 55%, #000 45%, transparent 85%); mask-image: radial-gradient(75% 70% at 55% 55%, #000 45%, transparent 85%); animation: flutua 14s ease-in-out infinite alternate; }
-@keyframes flutua { to { transform: scale(1.04) translateY(-6px); } }
+.hero-midia img { position: absolute; inset: -4% -10% -2% 0; width: 110%; height: 106%; object-fit: cover; object-position: 50% 50%; -webkit-mask-image: radial-gradient(75% 70% at 55% 55%, #000 45%, transparent 85%); mask-image: radial-gradient(75% 70% at 55% 55%, #000 45%, transparent 85%); animation: assenta 1.6s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes assenta { from { transform: scale(1.05) translateY(8px); opacity: .4; } }
 .consultor { position: relative; display: flex; align-items: center; gap: 14px; margin: -28px 0 32px; padding: 14px 18px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); border-radius: 14px; max-width: 560px; backdrop-filter: blur(8px); }
 .consultor .av { width: 42px; height: 42px; border-radius: 50%; background: var(--laranja); color: #fff; display: grid; place-items: center; font-weight: 700; flex: none; }
 .consultor small { display: block; color: #948c88; font-size: 12px; }
@@ -212,10 +212,6 @@ svg { width: 1em; height: 1em; fill: currentColor; flex: none; }
 /* ---------- modal de produto ---------- */
 dialog { border: 0; padding: 0; color: inherit; background: #fff; }
 dialog::backdrop { background: rgba(15, 14, 14, .55); }
-dialog[open] { animation: aparece .35s var(--ease); }
-dialog[open]::backdrop { animation: fundo .35s ease; }
-@keyframes aparece { from { opacity: 0; transform: translateY(16px) scale(.985); } }
-@keyframes fundo { from { opacity: 0; } }
 .modal { width: min(1120px, calc(100vw - 48px)); max-height: calc(100dvh - 48px); border-radius: 22px; overflow: hidden; }
 .fechar { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--linha); background: #fff; font-size: 24px; line-height: 1; color: var(--texto); display: grid; place-items: center; flex: none; transition: border-color .2s; }
 .fechar:hover { border-color: var(--tinta); }
@@ -255,8 +251,6 @@ dialog[open]::backdrop { animation: fundo .35s ease; }
 
 /* ---------- gaveta lista ---------- */
 .gaveta { margin: 0 0 0 auto; width: min(460px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
-.gaveta[open] { animation: desliza .4s var(--ease); }
-@keyframes desliza { from { transform: translateX(40px); opacity: 0; } }
 .gaveta-in { height: 100%; display: flex; flex-direction: column; }
 .gaveta-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 24px 24px 18px; border-bottom: 1px solid var(--linha); }
 .gaveta-cab h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
@@ -580,3 +574,64 @@ body { font-size: 15px; }
 @container (max-width: 180px) { .passo label span { display: none; } }
 .produto-acao { container-type: inline-size; }
 .selo.poucas { background: #fff4ec; color: #b2441c; }
+
+/* ================= movimento das janelas (igual em todo o sistema) =================
+   Entram com desaceleração e saem mais rápido; o fundo escurece junto.
+   Navegadores antigos simplesmente abrem e fecham sem animação. */
+dialog {
+  opacity: 0;
+  transform: translateY(6px) scale(.985);
+  transition: opacity .16s cubic-bezier(.4, 0, 1, 1), transform .16s cubic-bezier(.4, 0, 1, 1), overlay .16s allow-discrete, display .16s allow-discrete;
+}
+dialog[open] {
+  opacity: 1;
+  transform: none;
+  transition-duration: .26s;
+  transition-timing-function: cubic-bezier(.16, 1, .3, 1);
+}
+@starting-style { dialog[open] { opacity: 0; transform: translateY(10px) scale(.985); } }
+.gaveta:not([open]) { transform: translateX(28px); }
+@starting-style { .gaveta[open] { transform: translateX(44px); } }
+.gaveta[open] { transition-duration: .32s; transition-timing-function: cubic-bezier(.32, .72, 0, 1); }
+dialog::backdrop {
+  background-color: rgba(15, 14, 14, 0);
+  transition: background-color .16s ease-in, overlay .16s allow-discrete, display .16s allow-discrete;
+}
+dialog[open]::backdrop { background-color: rgba(15, 14, 14, .55); transition-duration: .26s; }
+@starting-style { dialog[open]::backdrop { background-color: rgba(15, 14, 14, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  /* sem deslocamento: só o esmaecer, que continua mostrando que a janela abriu ou fechou */
+  dialog, dialog[open] { transform: none !important; }
+}
+
+/* ================= celular: produto na primeira tela =================
+   O cliente chega pelo WhatsApp querendo preço: no celular o topo grande sai,
+   a busca e as categorias sobem, e o link da tabela em PDF vai para a faixa do topo. */
+.aviso-pdf { display: none; color: #fff; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, .4); }
+@media (max-width: 640px) {
+  .hero { display: none; }
+  .aviso-topo .w { font-size: 12.5px; justify-content: space-between; }
+  .aviso-atacado, .aviso-topo .sep { display: none; }
+  .aviso-pdf { display: inline; flex: none; }
+  #atualizado { overflow: hidden; text-overflow: ellipsis; }
+  .cats-visuais { padding-top: 24px; }
+  .cats-visuais .sec-cab h2 { font-size: 20px; }
+}
+
+/* barra de rolagem das categorias na cor do site (antes era a cinza padrão do navegador) */
+/* Chrome/Edge só usam o estilo abaixo se scrollbar-width/color não estiverem definidos */
+.tiles { scrollbar-width: auto; scrollbar-color: auto; }
+@supports not selector(::-webkit-scrollbar) { .tiles { scrollbar-width: thin; scrollbar-color: #d6cec8 transparent; } }
+.tiles::-webkit-scrollbar { height: 6px; }
+.tiles::-webkit-scrollbar-button { display: none; }
+.tiles::-webkit-scrollbar-thumb { background: #d6cec8; border-radius: 999px; }
+.tiles::-webkit-scrollbar-thumb:hover { background: #bdb3ac; }
+.tiles::-webkit-scrollbar-track { background: transparent; }
+
+/* rótulos em letra normal (antes: maiúsculas espaçadas, que cansam a leitura e parecem modelo pronto) */
+.migalha, .ficha-tit, .lateral-tit, .rodape-tit, .promo-selo, .eyebrow { text-transform: none; letter-spacing: 0; }
+.migalha { font-size: 13px; font-weight: 500; color: var(--suave); }
+.ficha-tit { font-size: 15px; font-weight: 700; color: var(--tinta); margin-bottom: 8px; }
+.lateral-tit { font-size: 13.5px; font-weight: 700; color: var(--tinta); }
+.rodape-tit { font-size: 14px; font-weight: 700; }
+.promo-selo { font-size: 13px; }
