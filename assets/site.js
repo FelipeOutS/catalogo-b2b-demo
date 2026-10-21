@@ -429,7 +429,7 @@
     }).join('');
     $('#total').textContent = brl(t.total);
     const c = estado.consultor;
-    $('#paraConsultor').textContent = 'Envie esta lista para o vendedor que te passou o catálogo.';
+    $('#paraConsultor').textContent = 'Envie esta lista ao vendedor que passou o catálogo para você.';
   }
 
   $('#itens').addEventListener('click', e => {
@@ -578,7 +578,7 @@
           <div class="det-acao">${acaoHtml(p)}</div>
         </div>
         ${p.specs.length ? `<div class="ficha"><p class="ficha-tit">Especificações</p><dl>${p.specs.map(s => `<div><dt>${esc(s.rotulo || 'Detalhe')}</dt><dd>${esc(s.valor)}</dd></div>`).join('')}</dl></div>` : ''}
-        <p class="det-nota">Imagens meramente ilustrativas. Dúvidas sobre especificações e funcionalidades, fale com o seu vendedor.</p>
+        <p class="det-nota">Imagens meramente ilustrativas. Dúvidas sobre especificações e funcionalidades? Fale com o seu vendedor.</p>
       </div>
     </div>`;
     if (!m.open) m.showModal();

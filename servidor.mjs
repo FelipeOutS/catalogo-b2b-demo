@@ -322,7 +322,7 @@ function api(req, corpo) {
     let atual = lista.find(x => x.id === a.id);
     if (!atual) { if (!a.novaSenha) return { ok: false, erro: 'Defina uma senha.' }; atual = { id: crypto.randomUUID() }; lista.push(atual); }
     Object.assign(atual, { nome: String(a.nome).trim(), login });
-    if (a.novaSenha) { if (String(a.novaSenha).length < 4) return { ok: false, erro: 'A senha precisa ter pelo menos 4 caracteres.' }; Object.assign(atual, novoHash(a.novaSenha)); }
+    if (a.novaSenha) { if (String(a.novaSenha).length < 6) return { ok: false, erro: 'A senha precisa ter pelo menos 6 caracteres.' }; Object.assign(atual, novoHash(a.novaSenha)); }
     gravar('admins', lista);
     return { ok: true, admins: lista.map(publicoAdmin) };
   }
@@ -447,7 +447,7 @@ function api(req, corpo) {
     case 'backupAutoSalvar': {
       const c = cfgBackupAuto();
       const pasta = String(d.pasta || '').trim();
-      if (d.ativo && !path.isAbsolute(pasta)) return { ok: false, erro: 'Informe a pasta completa, por exemplo C:\\Users\\Voce\\OneDrive\\Backup Catálogo Aiker.' };
+      if (d.ativo && !path.isAbsolute(pasta)) return { ok: false, erro: 'Informe a pasta completa, por exemplo C:\\Users\\SeuNome\\OneDrive\\Backup Catálogo Aiker.' };
       const anterior = { ...c };
       Object.assign(c, { ativo: !!d.ativo, pasta: pasta || c.pasta });
       gravar('backup-auto', c);

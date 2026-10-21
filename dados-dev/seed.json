@@ -1377,7 +1377,7 @@
   {
    "codigo": "ABS-150",
    "categoria": "Ferramenta | Scanner",
-   "nome": "BOMBA DE SUCCAO MANUAL",
+   "nome": "BOMBA DE SUCÇÃO MANUAL",
    "preco": 9,
    "promo": null,
    "pcs": "100",
@@ -1606,7 +1606,7 @@
   {
    "codigo": "AFC-120",
    "categoria": "Peça | Antena",
-   "nome": "FUSÍVEL LAMINA 120 PEÇAS",
+   "nome": "FUSÍVEL LÂMINA 120 PEÇAS",
    "preco": 160.5,
    "promo": null,
    "pcs": "100",
@@ -1623,7 +1623,7 @@
   {
    "codigo": "AFC-306",
    "categoria": "Peça | Antena",
-   "nome": "FUSÍVEL LAMINA AUTOMOTIVO 306 PEÇAS",
+   "nome": "FUSÍVEL LÂMINA AUTOMOTIVO 306 PEÇAS",
    "preco": 9.5,
    "promo": null,
    "pcs": "50",
@@ -2028,7 +2028,7 @@
    "specs": [
     "POTÊNCIA: 500W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 220V",
+    "TENSÃO DE SAÍDA: 220V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2048,7 +2048,7 @@
    "specs": [
     "POTÊNCIA: 500W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 110V",
+    "TENSÃO DE SAÍDA: 110V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2068,7 +2068,7 @@
    "specs": [
     "POTÊNCIA: 800W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 110V",
+    "TENSÃO DE SAÍDA: 110V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2088,7 +2088,7 @@
    "specs": [
     "POTÊNCIA: 800W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 220V",
+    "TENSÃO DE SAÍDA: 220V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2128,7 +2128,7 @@
    "specs": [
     "POTÊNCIA: 500W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 110V",
+    "TENSÃO DE SAÍDA: 110V",
     "TIPO DE ONDA: SENOIDAL PURA"
    ],
    "fotos": [
@@ -2148,7 +2148,7 @@
    "specs": [
     "POTÊNCIA: 500W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 220V",
+    "TENSÃO DE SAÍDA: 220V",
     "TIPO DE ONDA: SENOIDAL PURA"
    ],
    "fotos": [
@@ -2168,7 +2168,7 @@
    "specs": [
     "POTÊNCIA: 1000W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 110V",
+    "TENSÃO DE SAÍDA: 110V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2188,7 +2188,7 @@
    "specs": [
     "POTÊNCIA: 1000W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 220V",
+    "TENSÃO DE SAÍDA: 220V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2208,7 +2208,7 @@
    "specs": [
     "POTÊNCIA DE PICO: 350W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 220V",
+    "TENSÃO DE SAÍDA: 220V",
     "FAIXA DE ENTRADA: 9,5V A 15,5V"
    ],
    "fotos": [
@@ -2228,7 +2228,7 @@
    "specs": [
     "POTÊNCIA DE PICO: 350W",
     "TENSÃO DE ENTRADA: 12V",
-    "TENSÃO DE SÁIDA: 110V",
+    "TENSÃO DE SAÍDA: 110V",
     "FAIXA DE ENTRADA: 9,5V A 15,5V"
    ],
    "fotos": [
@@ -2268,7 +2268,7 @@
    "specs": [
     "POTÊNCIA: 800W",
     "TENSÃO DE ENTRADA: 12/24V",
-    "TENSÃO DE SÁIDA: 110V",
+    "TENSÃO DE SAÍDA: 110V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2288,7 +2288,7 @@
    "specs": [
     "POTÊNCIA: 800W",
     "TENSÃO DE ENTRADA: 12/24V",
-    "TENSÃO DE SÁIDA: 220V",
+    "TENSÃO DE SAÍDA: 220V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2328,7 +2328,7 @@
    "specs": [
     "POTÊNCIA: 1500W",
     "TENSÃO DE ENTRADA: 12/24V",
-    "TENSÃO DE SÁIDA: 220V",
+    "TENSÃO DE SAÍDA: 220V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2348,7 +2348,7 @@
    "specs": [
     "POTÊNCIA: 1500W",
     "TENSÃO DE ENTRADA: 12/24V",
-    "TENSÃO DE SÁIDA: 110V",
+    "TENSÃO DE SAÍDA: 110V",
     "TIPO DE ONDA: ONDA SENOIDAL MODIFICADA"
    ],
    "fotos": [
@@ -2550,7 +2550,7 @@
   {
    "codigo": "AWA-341",
    "categoria": "Estética",
-   "nome": "CERA CARNAUBA AUTOMOTIVA",
+   "nome": "CERA CARNAÚBA AUTOMOTIVA",
    "preco": 223.5,
    "promo": 190,
    "pcs": "36",

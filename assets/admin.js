@@ -502,7 +502,7 @@
       try { await api('removerAdmin', { id: a.id }); toast('Acesso removido'); carregarUsuariosPainel(); } catch (err) { toast(err.message, true); }
       return;
     }
-    const nova = prompt(`Nova senha para ${a.nome} (mínimo 4 caracteres):`);
+    const nova = prompt(`Nova senha para ${a.nome} (mínimo 6 caracteres):`);
     if (!nova) return;
     try { await api('salvarAdmin', { admin: { ...a, novaSenha: nova } }); toast('Senha trocada'); } catch (err) { toast(err.message, true); }
   });
@@ -2273,7 +2273,8 @@
       // "sem preços": tira as colunas de valor (se a planilha voltar, os preços do painel não mudam)
       const fica = cab.map((h, k) => (semPreco && /^(PRECO|PRECO PROMO|PROMO INICIO|PROMO FIM)$/.test(h) ? -1 : k)).filter(k => k >= 0);
       const cab2 = fica.map(k => cab[k]);
-      const ws = XLSX.utils.aoa_to_sheet([cab2, ...linhas.map(l => fica.map(k => l[k]))]);
+      const acento = { CODIGO: 'CÓDIGO', PRECO: 'PREÇO', 'PRECO PROMO': 'PREÇO PROMO', 'PROMO INICIO': 'PROMO INÍCIO' };
+      const ws = XLSX.utils.aoa_to_sheet([cab2.map(h => acento[h] || h), ...linhas.map(l => fica.map(k => l[k]))]);
       ws['!cols'] = cab2.map(h => ({ wch: h === 'NOME' ? 42 : h.startsWith('ESPEC') ? 34 : h.startsWith('FOTO') ? 24 : h === 'CATEGORIA' ? 26 : 12 }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'PRODUTOS');
@@ -2300,7 +2301,7 @@
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[nomeAba], { header: 1, raw: true, defval: '' });
       // acha a linha do cabeçalho (a primeira que tem CODIGO)
       const iCab = rows.findIndex(r => r.some(c => norm(c) === 'CODIGO' || norm(c) === 'COD' || norm(c) === 'CÓDIGO'));
-      if (iCab < 0) throw new Error('Não encontrei a coluna CODIGO na planilha.');
+      if (iCab < 0) throw new Error('Não encontrei a coluna CÓDIGO na planilha.');
       const cab = rows[iCab].map(h => norm(h).replace(/^COD$/, 'CODIGO').replace(/^PRECO UNITARIO$|^PRECO UN\.?$|^VALOR$/, 'PRECO').replace(/^PROMO(CAO)?$|^PRECO PROMOCIONAL$/, 'PRECO PROMO').replace(/^PCS ?CX$|^PCS$|^QTD ?CX$|^CAIXA$/, 'PCS/CX').replace(/^(PROMO(CAO)? )?(INICIO|DE|COMECA)( PROMO(CAO)?)?$/, 'PROMO INICIO').replace(/^(PROMO(CAO)? )?(FIM|ATE|TERMINA)( PROMO(CAO)?)?$/, 'PROMO FIM'));
       const linhas = rows.slice(iCab + 1).filter(r => String(r[cab.indexOf('CODIGO')] || '').trim());
       importacao = { cab, linhas, nomeArq: arq.name };
@@ -2624,7 +2625,7 @@ ${urlCatalogo()}`;
       try {
         guardarChave((await api('trocarSenha', { novaSenha: a })).token);
         m.oncancel = null; m.close();
-        toast('Senha criada. Use ela da próxima vez que entrar.');
+        toast('Senha criada. Use essa senha da próxima vez que entrar.');
       } catch (e) { erro(e.message); }
     };
     m.onkeydown = e => { if (e.key === 'Enter') $('[data-s]', m).click(); };
@@ -2672,7 +2673,7 @@ ${urlCatalogo()}`;
     $('#baPasta').value = c.pasta || '';
     $('#baStatus').textContent = c.erro ? 'Problema no último backup automático: ' + c.erro
       : c.ativo ? (c.ultimo ? `Último backup automático: ${c.ultimo}.` : 'Ligado. O primeiro backup automático é feito hoje.')
-      : 'Desligado. Lembre de baixar o backup de vez em quando.';
+      : 'Desligado. Lembre-se de baixar o backup de vez em quando.';
     $('#baStatus').classList.toggle('erro-txt', !!c.erro);
   }
   async function carregarBackupAuto() { try { mostrarBackupAuto(await api('backupAuto')); } catch (e) { /* servidor antigo */ } }
@@ -2691,7 +2692,7 @@ ${urlCatalogo()}`;
     $('#paAtivo').checked = !!c.ativo;
     $('#paBase').value = c.base || '';
     $('#paPrevia').innerHTML = c.previa ? 'Hoje fica em <code>' + esc(c.previa) + '</code>' : '';
-    $('#paStatus').textContent = c.erro ? 'Última vez, faltou: ' + c.erro
+    $('#paStatus').textContent = c.erro ? 'Na última vez, faltou: ' + c.erro
       : c.ultimo ? `Última pasta criada em ${c.ultimo}, com ${(c.arquivos || []).length} arquivos.`
       : c.ativo ? 'Ligado. A pasta é criada na próxima vez que você publicar.' : 'Desligado.';
     $('#paStatus').classList.toggle('erro-txt', !!c.erro);
