@@ -1,6 +1,7 @@
 // Servidor do sistema no computador: node servidor.mjs  →  http://localhost:5173
 // Guarda os dados na pasta dados-dev/ e as fotos enviadas em fotos-dev/.
-// Senha do admin nos testes: aiker
+// Por segurança, só atende este computador (127.0.0.1). Para liberar na rede: HOST=0.0.0.0 (e troque a senha antes).
+// Os testes usam DADOS_DIR, FOTOS_DIR e PORT para rodar com uma cópia dos dados, sem tocar nos verdadeiros.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,9 +12,10 @@ import { spawn } from 'node:child_process';
 
 const raiz = path.dirname(fileURLToPath(import.meta.url));
 const porta = Number(process.env.PORT) || 5173;
-const SENHA = process.env.SENHA_ADMIN || 'aiker';
-const DIR = path.join(raiz, 'dados-dev');
-const FOTOS = path.join(raiz, 'fotos-dev');
+const HOST = process.env.HOST || '';
+const SENHA_PADRAO = process.env.SENHA_ADMIN || 'aiker';
+const DIR = process.env.DADOS_DIR ? path.resolve(process.env.DADOS_DIR) : path.join(raiz, 'dados-dev');
+const FOTOS = process.env.FOTOS_DIR ? path.resolve(process.env.FOTOS_DIR) : path.join(raiz, 'fotos-dev');
 fs.mkdirSync(DIR, { recursive: true });
 fs.mkdirSync(FOTOS, { recursive: true });
 
@@ -63,15 +65,57 @@ function segredo() {
 }
 // token do vendedor: muda se a senha dele mudar (assim um aparelho antigo deixa de valer)
 function tokenVendedor(v) { return crypto.createHash('sha256').update(segredo() + ':' + v.id + ':' + (v.hash || '')).digest('hex').slice(0, 40); }
+// ---- senhas ----
+// guardadas com scrypt (as antigas, em sha256 ou texto, continuam valendo e são convertidas no próximo acesso)
+function novoHash(senha) { const sal = crypto.randomBytes(16).toString('hex'); return { alg: 'scrypt', sal, hash: crypto.scryptSync(String(senha), sal, 32).toString('hex') }; }
+const igual = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
+function confere(reg, senha) {
+  if (!reg || !reg.hash) return false;
+  const s = String(senha || '');
+  return igual(reg.alg === 'scrypt' ? crypto.scryptSync(s, reg.sal, 32).toString('hex') : hash(reg.sal, s), reg.hash);
+}
+// senha do administrador principal: sem arquivo = senha padrão (o painel pede para trocar)
+function senhaPrincipal() {
+  const s = ler('senha');
+  if (typeof s === 'string') { const reg = novoHash(s); gravar('senha', reg); return reg; }
+  return s && s.hash ? s : null;
+}
+const usaSenhaPadrao = () => !senhaPrincipal();
+// chave de acesso do painel: o navegador guarda a chave, nunca a senha; trocar a senha invalida as chaves antigas
+const chaveAdmin = (login, reg) => crypto.createHmac('sha256', segredo()).update('adm:' + login + ':' + (reg ? reg.hash : 'padrao')).digest('hex').slice(0, 48);
+// muitas tentativas erradas: espera 2 minutos
+const falhas = new Map();
+let ipAtual = '';
+function contarFalha() {
+  const f = falhas.get(ipAtual) || { n: 0, desde: Date.now() };
+  if (Date.now() - f.desde > 10 * 60e3) { f.n = 0; f.desde = Date.now(); }
+  f.n++; if (f.n >= 5) f.ate = Date.now() + 2 * 60e3;
+  falhas.set(ipAtual, f);
+}
+function checarBloqueio() {
+  const f = falhas.get(ipAtual);
+  if (f && f.ate > Date.now()) throw new Error('Muitas tentativas com a senha errada. Espere 2 minutos e tente de novo.');
+  if (f && f.ate && f.ate <= Date.now()) falhas.delete(ipAtual);
+}
+
 function publicoAdmin(a) { return { id: a.id, nome: a.nome, login: a.login }; }
 // quem está usando o painel: principal (senha mestra, usuário em branco) ou um usuário extra
 function autenticar(d) {
   const u = String(d.usuario || '').trim().toLowerCase();
-  if (u) {
-    const a = admins().find(x => x.login === u);
-    return a && a.hash === hash(a.sal, String(d.senha || '')) ? { nome: a.nome, login: a.login, id: a.id, principal: false } : null;
-  }
-  return d.senha === (ler('senha') || SENHA) ? { nome: 'Administrador principal', login: '', principal: true } : null;
+  const a = u ? admins().find(x => x.login === u) : null;
+  if (u && !a) { if (d.senha) { checarBloqueio(); contarFalha(); } return null; }
+  const reg = u ? a : senhaPrincipal();
+  const quem = u ? { nome: a.nome, login: a.login, id: a.id, principal: false } : { nome: 'Administrador principal', login: '', principal: true };
+  // com a chave de acesso (rápido, a cada clique)
+  if (d.token) return igual(d.token, chaveAdmin(u, reg)) ? quem : null;
+  // com a senha (só ao entrar)
+  if (!d.senha) return null;
+  checarBloqueio();
+  const certa = reg ? confere(reg, d.senha) : igual(String(d.senha || ''), SENHA_PADRAO);
+  if (!certa) { contarFalha(); return null; }
+  falhas.delete(ipAtual);
+  if (u && a.alg !== 'scrypt') { const l = admins(); Object.assign(l.find(x => x.id === a.id), novoHash(d.senha)); gravar('admins', l); }
+  return quem;
 }
 function hash(sal, senha) { return crypto.createHash('sha256').update(sal + ':' + senha, 'utf8').digest('hex'); }
 function publicoVend(v) { return { id: v.id, nome: v.nome, login: v.login, contato: v.contato || '', email: v.email || '' }; }
@@ -242,7 +286,7 @@ function api(req, corpo) {
   // ---- vendedores (login próprio) ----
   if (d.acao === 'vendedorEntrar') {
     const v = acessos().find(x => x.login === String(d.login || '').trim().toLowerCase());
-    if (!v || v.hash !== hash(v.sal, String(d.senhaVendedor || ''))) return { ok: false, erro: 'login' };
+    if (!v || !confere(v, d.senhaVendedor)) return { ok: false, erro: 'login' };
     return { ok: true, vendedor: { ...publicoVend(v), token: tokenVendedor(v) } };
   }
   if (d.acao === 'registrarProposta') {
@@ -278,7 +322,7 @@ function api(req, corpo) {
     let atual = lista.find(x => x.id === a.id);
     if (!atual) { if (!a.novaSenha) return { ok: false, erro: 'Defina uma senha.' }; atual = { id: crypto.randomUUID() }; lista.push(atual); }
     Object.assign(atual, { nome: String(a.nome).trim(), login });
-    if (a.novaSenha) { if (String(a.novaSenha).length < 4) return { ok: false, erro: 'A senha precisa ter pelo menos 4 caracteres.' }; atual.sal = crypto.randomBytes(8).toString('hex'); atual.hash = hash(atual.sal, String(a.novaSenha)); }
+    if (a.novaSenha) { if (String(a.novaSenha).length < 4) return { ok: false, erro: 'A senha precisa ter pelo menos 4 caracteres.' }; Object.assign(atual, novoHash(a.novaSenha)); }
     gravar('admins', lista);
     return { ok: true, admins: lista.map(publicoAdmin) };
   }
@@ -292,7 +336,7 @@ function api(req, corpo) {
     let atual = lista.find(x => x.id === v.id);
     if (!atual) { if (!v.novaSenha) return { ok: false, erro: 'Defina uma senha para o vendedor.' }; atual = { id: crypto.randomUUID() }; lista.push(atual); }
     Object.assign(atual, { nome: String(v.nome).trim(), login, contato: String(v.contato || '').trim(), email: String(v.email || '').trim() });
-    if (v.novaSenha) { if (String(v.novaSenha).length < 4) return { ok: false, erro: 'A senha precisa ter pelo menos 4 caracteres.' }; atual.sal = crypto.randomBytes(8).toString('hex'); atual.hash = hash(atual.sal, String(v.novaSenha)); }
+    if (v.novaSenha) { if (String(v.novaSenha).length < 4) return { ok: false, erro: 'A senha precisa ter pelo menos 4 caracteres.' }; Object.assign(atual, novoHash(v.novaSenha)); }
     gravar('acessos', lista);
     return { ok: true, vendedores: lista.map(publicoVend) };
   }
@@ -305,7 +349,7 @@ function api(req, corpo) {
   const p = publicado();
   switch (d.acao) {
     case 'entrar':
-      return { ok: true, quem: { nome: quem.nome, login: quem.login, principal: quem.principal } };
+      return { ok: true, quem: { nome: quem.nome, login: quem.login, principal: quem.principal }, token: chaveAdmin(quem.login, quem.principal ? senhaPrincipal() : admins().find(x => x.id === quem.id)), senhaPadrao: quem.principal && usaSenhaPadrao() };
     case 'rascunho':
       return { ok: true, ...r, publicadoEm: p.publicadoEm, pendente: pendente(r, p) };
     case 'salvar': {
@@ -431,28 +475,32 @@ function api(req, corpo) {
       return { ok: true, produtos: b.rascunho.produtos.length, geradoEm: b.geradoEm || '' };
     }
     case 'trocarSenha': {
-      if (!d.novaSenha || String(d.novaSenha).length < 4) return { ok: false, erro: 'A nova senha precisa ter pelo menos 4 caracteres.' };
+      const nova = String(d.novaSenha || '');
+      if (nova.length < 6) return { ok: false, erro: 'A nova senha precisa ter pelo menos 6 caracteres.' };
+      if (nova.toLowerCase() === SENHA_PADRAO.toLowerCase()) return { ok: false, erro: 'Escolha uma senha diferente da senha padrão.' };
       if (!quem.principal) {
         const lista = admins(); const a = lista.find(x => x.id === quem.id);
-        a.sal = crypto.randomBytes(8).toString('hex'); a.hash = hash(a.sal, String(d.novaSenha));
+        Object.assign(a, novoHash(nova));
         gravar('admins', lista);
-        return { ok: true };
+        return { ok: true, token: chaveAdmin(a.login, a) };
       }
-      gravar('senha', String(d.novaSenha));
-      return { ok: true };
+      const reg = novoHash(nova);
+      gravar('senha', reg);
+      return { ok: true, token: chaveAdmin('', reg) };
     }
     default:
       return { ok: false, erro: 'Ação desconhecida' };
   }
 }
 
-http.createServer((req, res) => {
+const servidor = http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p === '/api') {
     let corpo = '';
     req.on('data', c => { corpo += c; if (corpo.length > 300e6) req.destroy(); });
     req.on('end', async () => {
       let saida;
+      ipAtual = req.socket.remoteAddress || '';
       try {
         let d = {}; try { d = JSON.parse(corpo || '{}'); } catch (e) { /* api() responde */ }
         // arquivar a atualização (gera PDFs): é demorado, então roda à parte
@@ -468,15 +516,29 @@ http.createServer((req, res) => {
   }
   if (p.endsWith('/')) p += 'index.html';
   if (p === '/admin') p = '/admin.html';
-  const caminho = path.join(raiz, p);
-  if (!caminho.startsWith(raiz) || /[\\/]dados-dev[\\/]/.test(caminho)) { res.writeHead(403).end(); return; }
+  // fotos enviadas pelo painel (podem estar em outra pasta nos testes)
+  const caminho = p.startsWith('/fotos-dev/') ? path.join(FOTOS, path.basename(p)) : path.join(raiz, p);
+  const rel = path.relative(raiz, caminho);
+  const proibido = /(^|[\\/])(\.[^\\/]*|dados-dev|ferramentas|planilha|testes|node_modules)([\\/]|$)|\.(mjs|md|log|vbs|cjs)$/i;
+  if (!p.startsWith('/fotos-dev/') && (rel.startsWith('..') || path.isAbsolute(rel) || proibido.test(rel))) { res.writeHead(403).end(); return; }
   fs.readFile(caminho, (err, dados) => {
     if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Não encontrado'); return; }
     res.writeHead(200, { 'Content-Type': tipos[path.extname(caminho).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(dados);
   });
-}).listen(porta, () => {
-  backupAutomatico(false); // ao ligar e depois de hora em hora (só grava uma vez por dia)
-  setInterval(() => backupAutomatico(false), 60 * 60 * 1000);
-  console.log(`Catálogo: http://localhost:${porta}  ·  Admin: http://localhost:${porta}/admin  (senha de teste: ${SENHA})`);
+});
+// só este computador: 127.0.0.1 e ::1 ("localhost" pode ser qualquer um dos dois)
+const enderecos = HOST ? [HOST] : ['127.0.0.1', '::1'];
+let ligados = 0;
+enderecos.forEach((h, k) => {
+  const s = k === 0 ? servidor : http.createServer(servidor.listeners('request')[0]);
+  s.on('error', e => { if (k === 0) { console.error('Não foi possível ligar o servidor: ' + e.message); process.exit(1); } });
+  s.listen(porta, h, () => {
+    if (ligados++) return;
+    if (!process.env.DADOS_DIR) {
+      backupAutomatico(false); // ao ligar e depois de hora em hora (só grava uma vez por dia)
+      setInterval(() => backupAutomatico(false), 60 * 60 * 1000);
+    }
+    console.log(`Catálogo: http://localhost:${porta}  ·  Admin: http://localhost:${porta}/admin${HOST ? '  ·  aberto em ' + HOST : '  ·  só neste computador'}${usaSenhaPadrao() ? '  ·  ATENÇÃO: troque a senha padrão no painel' : ''}`);
+  });
 });

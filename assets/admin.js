@@ -6,8 +6,10 @@
   const API = (window.AIKER_CONFIG || {}).api;
   const MAX_FOTOS = 8;
   const MAX_SPECS = 20;
-  const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  const OCR_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  // bibliotecas guardadas no próprio projeto (assets/vendor): tudo funciona sem internet
+  const VENDOR = new URL('assets/vendor/', location.href).href;
+  const XLSX_URL = VENDOR + 'xlsx.full.min.js'; // SheetJS 0.18.5
+  const OCR_URL = VENDOR + 'ocr/tesseract.min.js'; // tesseract.js 5.1.1
 
   const E = {
     senha: '', produtos: [], config: {}, vendedores: [], publicadoEm: '', alteradoEm: '', pendente: false,
@@ -31,13 +33,18 @@
     clearTimeout(toast.t);
     toast.t = setTimeout(() => { el.className = 'toast'; }, erro ? 4200 : 2400);
   }
+  // carrega cada biblioteca uma vez só (mesmo com dois cliques rápidos ou endereço escrito de outro jeito)
+  const scripts = {};
   function carregarScript(url) {
-    return new Promise((ok, falha) => {
-      if (document.querySelector(`script[src="${url}"]`)) { ok(); return; }
+    const abs = new URL(url, location.href).href;
+    if (scripts[abs]) return scripts[abs];
+    if ([...document.scripts].some(s => s.src === abs)) return (scripts[abs] = Promise.resolve());
+    return (scripts[abs] = new Promise((ok, falha) => {
       const s = document.createElement('script');
-      s.src = url; s.onload = ok; s.onerror = () => falha(new Error('Sem internet para carregar ' + url));
+      s.src = abs; s.onload = ok;
+      s.onerror = () => { delete scripts[abs]; s.remove(); falha(new Error('Não foi possível carregar ' + abs.split('/').pop() + '. Feche e abra o painel de novo.')); };
       document.head.appendChild(s);
-    });
+    }));
   }
   async function copiar(t) {
     try { await navigator.clipboard.writeText(t); return true; } catch (e) {
@@ -50,7 +57,7 @@
   // ================= API =================
   async function api(acao, dados = {}) {
     if (!API) throw new Error('O endereço do servidor (API) não está configurado no arquivo config.js.');
-    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ acao, usuario: E.usuario || '', senha: E.senha, ...dados }) });
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ acao, usuario: E.usuario || '', ...(E.token ? { token: E.token } : { senha: E.senha }), ...dados }) });
     let j;
     try { j = await r.json(); } catch (e) { throw new Error('O servidor não respondeu corretamente.'); }
     if (!j.ok) {
@@ -68,10 +75,11 @@
     $('#btnEntrar').disabled = true;
     $('#erroLogin').textContent = '';
     try {
-      await api('entrar');
-      guarda.gravar('aiker-admin', $('#lembrar').checked ? E.senha : null);
-      guarda.gravar('aiker-admin', E.senha, sessionStorage);
-      guarda.gravar('aiker-admin-usuario', $('#lembrar').checked ? E.usuario : null);
+      E.token = '';
+      const r = await api('entrar');
+      E.lembrar = $('#lembrar').checked;
+      guardarChave(r.token);
+      guarda.gravar('aiker-admin-usuario', E.lembrar ? E.usuario : null);
       guarda.gravar('aiker-admin-usuario', E.usuario, sessionStorage);
       await iniciar();
     } catch (err) {
@@ -79,7 +87,17 @@
     } finally { $('#btnEntrar').disabled = false; }
   });
 
+  // o navegador guarda só a chave de acesso (nunca a senha); trocar a senha invalida as chaves antigas
+  function guardarChave(t) {
+    E.token = t || ''; E.senha = '';
+    guarda.gravar('aiker-admin', null); guarda.gravar('aiker-admin', null, sessionStorage); // senha guardada pela versão antiga
+    guarda.gravar('aiker-admin-chave', E.lembrar ? E.token : null);
+    guarda.gravar('aiker-admin-chave', E.token, sessionStorage);
+  }
   function sair(porErro) {
+    E.token = '';
+    guarda.gravar('aiker-admin-chave', null);
+    guarda.gravar('aiker-admin-chave', null, sessionStorage);
     guarda.gravar('aiker-admin', null);
     guarda.gravar('aiker-admin', null, sessionStorage);
     guarda.gravar('aiker-admin-usuario', null);
@@ -92,9 +110,11 @@
   $('#btnSair').addEventListener('click', () => sair());
 
   (async function auto() {
-    const s = guarda.ler('aiker-admin', sessionStorage) || guarda.ler('aiker-admin');
-    if (!s) return;
-    E.senha = s;
+    E.token = guarda.ler('aiker-admin-chave', sessionStorage) || guarda.ler('aiker-admin-chave') || '';
+    E.lembrar = !!guarda.ler('aiker-admin-chave') || !!guarda.ler('aiker-admin');
+    const antiga = guarda.ler('aiker-admin', sessionStorage) || guarda.ler('aiker-admin'); // versão antiga guardava a senha
+    if (!E.token && !antiga) return;
+    if (!E.token) E.senha = antiga;
     E.usuario = guarda.ler('aiker-admin-usuario', sessionStorage) || guarda.ler('aiker-admin-usuario') || '';
     try { await iniciar(); } catch (e) { sair(); }
   })();
@@ -179,7 +199,10 @@
   });
 
   async function iniciar() {
-    try { E.quem = (await api('entrar')).quem || null; } catch (e) { throw e; }
+    const ent = await api('entrar');
+    E.quem = ent.quem || null;
+    if (ent.token) guardarChave(ent.token);
+    if (ent.senhaPadrao) setTimeout(exigirNovaSenha, 400);
     const d = await api('rascunho');
     E.produtos = d.produtos || [];
     E.config = d.config || {};
@@ -784,7 +807,7 @@
     const simples = p => `<tr><td>${nome(p)}</td><td>${esc(p.categoria || '')}</td></tr>`;
     const nada = !(d.precos.length + d.esgotaram.length + d.voltaram.length + d.novos.length + d.removidos.length);
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Resumo do catálogo ${hojeTxt.replace(/\//g, '-')}</title>
-      <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+      <link rel="stylesheet" href="${VENDOR}fontes.css">
       <style>
         @page { size: A4; margin: 14mm; }
         * { box-sizing: border-box; } body { margin: 0; font: 13px/1.45 'Barlow', system-ui, sans-serif; color: #1d1b1a; background: #f4f4f3; }
@@ -903,8 +926,8 @@
   document.addEventListener('scroll', comboPosicionar, true);
 
   // ================= capas em alta qualidade: JPG, PNG, WEBP ou PDF =================
-  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-  const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const PDFJS = VENDOR + 'pdf.min.js'; // PDF.js 3.11.174
+  const PDFJS_WORKER = VENDOR + 'pdf.worker.min.js';
   const ehPdf = f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
   const lerBase64 = blob => new Promise((ok, falha) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => falha(new Error('Não consegui ler o arquivo.')); r.readAsDataURL(blob); });
   const canvasBlob = (cv, tipo, q) => new Promise(ok => cv.toBlob(ok, tipo, q));
@@ -2197,6 +2220,7 @@
       const barra = () => $('.barra-prog i', st);
       const imagem = await prepararImagem(arq);
       worker = await window.Tesseract.createWorker('eng', 1, {
+        workerPath: VENDOR + 'ocr/worker.min.js', corePath: VENDOR + 'ocr/', langPath: VENDOR + 'ocr/',
         logger: m => { if (m.status === 'recognizing text' && barra()) { barra().style.width = Math.round(10 + m.progress * 90) + '%'; st.firstChild.textContent = 'Lendo o print… '; } },
       });
       // só os caracteres que aparecem em códigos e números; uma linha por produto
@@ -2565,16 +2589,37 @@ ${urlCatalogo()}`;
   }));
   $('#btnSenha').addEventListener('click', async () => {
     const n = $('#novaSenha').value;
-    if (n.length < 4) { toast('A senha precisa ter pelo menos 4 caracteres.', true); return; }
+    if (n.length < 6) { toast('A senha precisa ter pelo menos 6 caracteres.', true); return; }
     try {
-      await api('trocarSenha', { novaSenha: n });
-      E.senha = n;
-      if (guarda.ler('aiker-admin')) guarda.gravar('aiker-admin', n);
-      guarda.gravar('aiker-admin', n, sessionStorage);
+      guardarChave((await api('trocarSenha', { novaSenha: n })).token);
       $('#novaSenha').value = '';
       toast('Senha trocada');
     } catch (e) { toast(e.message, true); }
   });
+  // ainda com a senha que veio de fábrica: pede uma nova antes de continuar
+  function exigirNovaSenha() {
+    const m = modal(`<h2>Crie a sua senha</h2>
+      <p>O painel ainda usa a senha que veio de fábrica, que outras pessoas podem conhecer. Escolha uma senha só sua para proteger preços e produtos.</p>
+      <label class="campo">Nova senha<input type="password" id="ns1" autocomplete="new-password" minlength="6"></label>
+      <label class="campo">Repita a nova senha<input type="password" id="ns2" autocomplete="new-password"></label>
+      <p class="dica">Pelo menos 6 caracteres. Anote num lugar seguro: sem ela não dá para entrar no painel.</p>
+      <p class="erro-txt" id="nsErro" role="alert"></p>
+      <div class="acoes"><button class="btn btn-laranja" type="button" data-s>Salvar senha</button></div>`);
+    m.oncancel = e => e.preventDefault(); // não fecha com Esc
+    const erro = t => { $('#nsErro', m).textContent = t; };
+    $('#ns1', m).focus();
+    $('[data-s]', m).onclick = async () => {
+      const a = $('#ns1', m).value, b = $('#ns2', m).value;
+      if (a.length < 6) return erro('A senha precisa ter pelo menos 6 caracteres.');
+      if (a !== b) return erro('As duas senhas estão diferentes.');
+      try {
+        guardarChave((await api('trocarSenha', { novaSenha: a })).token);
+        m.oncancel = null; m.close();
+        toast('Senha criada. Use ela da próxima vez que entrar.');
+      } catch (e) { erro(e.message); }
+    };
+    m.onkeydown = e => { if (e.key === 'Enter') $('[data-s]', m).click(); };
+  }
 
   // ================= desfazer publicação (versões guardadas a cada publicação) =================
   const MOTIVOS = { publicacao: 'Publicação', 'antes-de-restaurar': 'Antes de restaurar um backup', 'antes-de-voltar': 'Antes de voltar uma versão' };

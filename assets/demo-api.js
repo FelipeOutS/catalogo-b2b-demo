@@ -52,7 +52,9 @@
   const publicoVend = v => ({ id: v.id, nome: v.nome, login: v.login, contato: v.contato || '', email: v.email || '' });
   const publicoAdmin = a => ({ id: a.id, nome: a.nome, login: a.login });
   const tokenVendedor = v => btoa(unescape(encodeURIComponent(v.id + ':' + v.senha))).slice(0, 40);
+  const chaveDemo = (login, senha) => btoa(unescape(encodeURIComponent(login + '\n' + senha)));
   function autenticar(d) {
+    if (d.token) { try { const [login, senha] = decodeURIComponent(escape(atob(d.token))).split('\n'); d = { ...d, usuario: login, senha }; } catch (e) { return null; } }
     const u = String(d.usuario || '').trim().toLowerCase();
     if (u) { const a = admins().find(x => x.login === u); return a && a.senha === String(d.senha || '') ? { nome: a.nome, login: a.login, id: a.id, principal: false } : null; }
     return d.senha === (ler('senha') || SENHA) ? { nome: 'Administrador (demonstração)', login: '', principal: true } : null;
@@ -133,7 +135,7 @@
     if (d.acao === 'removerVendedor') { const lista = acessos().filter(x => x.id !== d.id); gravar('acessos', lista); return { ok: true, vendedores: lista.map(publicoVend) }; }
     const r = await rascunho(); const p = await publicado();
     switch (d.acao) {
-      case 'entrar': return { ok: true, quem: { nome: quem.nome, login: quem.login, principal: quem.principal } };
+      case 'entrar': return { ok: true, quem: { nome: quem.nome, login: quem.login, principal: quem.principal }, token: d.token || chaveDemo(quem.login, String(d.senha || '')) };
       case 'rascunho': return { ok: true, ...r, publicadoEm: p.publicadoEm, pendente: pendente(r, p) };
       case 'salvar':
         if (Array.isArray(d.produtos)) r.produtos = d.produtos;
@@ -180,8 +182,8 @@
       }
       case 'trocarSenha':
         if (!d.novaSenha || String(d.novaSenha).length < 4) return { ok: false, erro: 'A nova senha precisa ter pelo menos 4 caracteres.' };
-        if (!quem.principal) { const l = admins(); const a = l.find(x => x.id === quem.id); a.senha = String(d.novaSenha); gravar('admins', l); return { ok: true }; }
-        gravar('senha', String(d.novaSenha)); return { ok: true };
+        if (!quem.principal) { const l = admins(); const a = l.find(x => x.id === quem.id); a.senha = String(d.novaSenha); gravar('admins', l); return { ok: true, token: chaveDemo(a.login, a.senha) }; }
+        gravar('senha', String(d.novaSenha)); return { ok: true, token: chaveDemo('', String(d.novaSenha)) };
       case 'pastaAtualizacao': return { ok: true, ativo: false, base: 'D:\\IKANOO', arquivos: [], previa: '' };
       case 'pastaAtualizacaoSalvar':
       case 'abrirPastaAtualizacao': return { ok: false, erro: 'Na demonstração não há pasta no computador.' };
