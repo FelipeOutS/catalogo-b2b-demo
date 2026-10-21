@@ -1,2 +1,3 @@
 *.vbs -text
 *.ico binary
+assets/vendor/** -text
