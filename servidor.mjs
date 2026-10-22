@@ -16,6 +16,11 @@ const HOST = process.env.HOST || '';
 const SENHA_PADRAO = process.env.SENHA_ADMIN || 'aiker';
 const DIR = process.env.DADOS_DIR ? path.resolve(process.env.DADOS_DIR) : path.join(raiz, 'dados-dev');
 const FOTOS = process.env.FOTOS_DIR ? path.resolve(process.env.FOTOS_DIR) : path.join(raiz, 'fotos-dev');
+// "Mover para outra marca": cada marca deixa o produto numa pasta de transferência ao lado dos catálogos
+// (E:\catalogo-transferencias\<marca de destino>) e a outra marca aceita pelo próprio painel
+const MARCA_ID = 'aiker';
+const MARCAS_IRMAS = [{ id: 'aiker', nome: 'Aiker' }, { id: 'aitek', nome: 'Aitek' }, { id: 'delta', nome: 'Delta Gaming' }];
+const TRANSF = process.env.TRANSF_DIR ? path.resolve(process.env.TRANSF_DIR) : path.join(raiz, '..', 'catalogo-transferencias');
 fs.mkdirSync(DIR, { recursive: true });
 fs.mkdirSync(FOTOS, { recursive: true });
 
@@ -397,6 +402,52 @@ function api(req, corpo) {
       if (c.rascunho && Array.isArray(c.rascunho.produtos)) gravar('rascunho', c.rascunho);
       gravar('publicado', { ...c.publicado, publicadoEm: agora() });
       return { ok: true };
+    }
+    case 'marcasIrmas':
+      return { ok: true, marcas: MARCAS_IRMAS.filter(m => m.id !== MARCA_ID) };
+    case 'transferirEnviar': {
+      const para = MARCAS_IRMAS.find(m => m.id === d.para && m.id !== MARCA_ID);
+      const prod = d.produto;
+      if (!para || !prod || !prod.codigo) return { ok: false, erro: 'Escolha a marca de destino.' };
+      // leva as fotos junto: as da pasta fotos/ (com as versões leves) e as enviadas pelo painel (fotos-dev/)
+      const arquivos = {};
+      (prod.fotos || []).forEach(f => {
+        const rel = String(f).replace(/^\/+/, '');
+        const lista = /^fotos-dev\//.test(rel) ? [[rel, path.join(FOTOS, path.basename(rel))]]
+          : /^[^/]+$/.test(rel) ? ['', 'pdf/', 'mini/'].map(sub => ['fotos/' + sub + rel, path.join(raiz, 'fotos', sub, rel)]) : [];
+        lista.forEach(([chave, arq]) => { if (fs.existsSync(arq)) arquivos[chave] = fs.readFileSync(arq).toString('base64'); });
+      });
+      const pasta = path.join(TRANSF, para.id);
+      fs.mkdirSync(pasta, { recursive: true });
+      const id = Date.now() + '-' + MARCA_ID + '-' + String(prod.codigo).replace(/[^\w-]+/g, '_').slice(0, 40);
+      fs.writeFileSync(path.join(pasta, id + '.json'), JSON.stringify({ id, de: MARCA_ID, deNome: (MARCAS_IRMAS.find(m => m.id === MARCA_ID) || {}).nome, em: agora(), por: quem.nome, produto: prod, arquivos }));
+      return { ok: true, para: para.nome };
+    }
+    case 'transferenciasRecebidas': {
+      const pasta = path.join(TRANSF, MARCA_ID);
+      const itens = fs.existsSync(pasta) ? fs.readdirSync(pasta).filter(f => f.endsWith('.json')).sort().map(f => { try { const t = JSON.parse(fs.readFileSync(path.join(pasta, f), 'utf8')); return { id: t.id, de: t.de, deNome: t.deNome, em: t.em, por: t.por, produto: t.produto, foto: Object.entries(t.arquivos || {}).filter(([k]) => !/\/(pdf|mini)\//.test(k)).map(([, v]) => v)[0] || '' }; } catch (e) { return null; } }).filter(Boolean) : [];
+      return { ok: true, itens };
+    }
+    case 'transferirAceitar':
+    case 'transferirRecusar': {
+      const pasta = path.join(TRANSF, MARCA_ID);
+      const f = path.join(pasta, path.basename(String(d.id || '')) + '.json');
+      if (!fs.existsSync(f)) return { ok: false, erro: 'Esse produto já foi aceito ou recusado.' };
+      const t = JSON.parse(fs.readFileSync(f, 'utf8'));
+      const destino = path.join(pasta, d.acao === 'transferirAceitar' ? 'aceitos' : 'recusados');
+      fs.mkdirSync(destino, { recursive: true });
+      fs.renameSync(f, path.join(destino, path.basename(f)));
+      if (d.acao === 'transferirRecusar') return { ok: true };
+      // aceitou: as fotos vão para fotos-dev/ desta marca (nomes novos, sem apagar nada daqui)
+      const novoNome = {};
+      Object.entries(t.arquivos || {}).filter(([k]) => !/^fotos\/(pdf|mini)\//.test(k)).forEach(([k, b64]) => {
+        const nome = Date.now() + '-' + path.basename(k).replace(/[^\w.-]+/g, '-').slice(0, 80);
+        fs.writeFileSync(path.join(FOTOS, nome), Buffer.from(b64, 'base64'));
+        novoNome[k.replace(/^fotos\//, '')] = 'fotos-dev/' + nome;
+        novoNome[k] = 'fotos-dev/' + nome;
+      });
+      const produto = { ...t.produto, fotos: (t.produto.fotos || []).map(f => novoNome[String(f).replace(/^\/+/, '')]).filter(Boolean) };
+      return { ok: true, produto, de: t.deNome };
     }
     case 'lixeiraAdd': {
       const l = ler('lixeira') || [];

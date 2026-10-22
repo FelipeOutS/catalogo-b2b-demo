@@ -221,6 +221,7 @@
     preencherConfig();
     mostrarStatus();
     desenharInicio();
+    verRecebidos();
     $('#quemSou').textContent = E.quem ? 'Você entrou como ' + E.quem.nome + (E.quem.login ? ' (usuário ' + E.quem.login + ')' : '') + '.' : '';
     carregarUsuariosPainel();
     mostrarQuem();
@@ -1156,6 +1157,79 @@
   }
   let menuLinha = null;
   function fecharMenuLinha() { if (menuLinha) { menuLinha.remove(); menuLinha = null; } }
+  // ================= mover produto para outra marca (Aiker, Aitek, Delta) =================
+  // o produto sai daqui (vai para a lixeira, dá para restaurar) e aparece no painel da outra marca para ser aceito
+  async function moverParaMarca(i) {
+    const p = E.produtos[i];
+    let marcas = [];
+    try { marcas = (await api('marcasIrmas')).marcas || []; } catch (e) { toast(e.message, true); return; }
+    const m = modal(`<h2>Mover para outra marca</h2>
+      <p><b>${esc(p.codigo)}</b> · ${esc(A.bonito(p.nome))}</p>
+      <div class="mover-op">${marcas.map((x, k) => `<label class="mover-marca"><input type="radio" name="moverPara" value="${esc(x.id)}" ${k ? '' : 'checked'}> ${esc(x.nome)}</label>`).join('')}</div>
+      <p class="dica">O produto sai desta marca (fica na lixeira por 30 dias) e aparece no painel da marca escolhida, que confere e aceita. As fotos vão junto.</p>
+      <div class="acoes"><button class="btn btn-claro" type="button" data-n>Cancelar</button><button class="btn btn-laranja" type="button" data-s>Mover</button></div>`);
+    $('[data-n]', m).onclick = () => m.close();
+    $('[data-s]', m).onclick = async () => {
+      const para = ($('input[name=moverPara]:checked', m) || {}).value;
+      try {
+        const r = await api('transferirEnviar', { para, produto: JSON.parse(JSON.stringify(p)) });
+        if (!r.ok) throw new Error(r.erro);
+        m.close();
+        lembrar('Movido para ' + r.para + ': ' + p.codigo);
+        mandarLixeira([p]);
+        E.produtos.splice(E.produtos.indexOf(p), 1);
+        preencherFiltros(); desenharProdutos(); alterado([]);
+        toast(`${p.codigo} enviado para a ${r.para}. Lá ele aparece em "Produtos recebidos".`);
+      } catch (e) { toast('Não foi possível mover: ' + e.message, true); }
+    };
+  }
+  // produtos que outra marca mandou para cá
+  async function verRecebidos() {
+    let itens = [];
+    try { itens = (await api('transferenciasRecebidas')).itens || []; } catch (e) { return; }
+    const box = $('#recebidos');
+    if (!box) return;
+    box.hidden = !itens.length;
+    if (!itens.length) return;
+    const s = itens.length === 1 ? '' : 's';
+    box.innerHTML = `<div><b>${itens.length} produto${s} recebido${s} de outra marca</b><p>${itens.map(x => esc(x.produto.codigo) + ' (da ' + esc(x.deNome) + ')').slice(0, 4).join(' · ')}${itens.length > 4 ? ' …' : ''}</p></div><button class="btn btn-laranja" type="button" id="btnRecebidos">Ver e aceitar</button>`;
+    $('#btnRecebidos').onclick = () => abrirRecebidos(itens);
+  }
+  function abrirRecebidos(itens) {
+    const cats = categorias();
+    const m = modal(`<h2>Produtos recebidos</h2>
+      <p class="dica" style="margin-top:0">Confira e escolha a categoria. Ao aceitar, o produto entra aqui como está; depois é só publicar.</p>
+      <ul class="lixo recebidos-lista">${itens.map(x => `<li data-id="${esc(x.id)}">
+        <div class="mini">${x.foto ? `<img src="data:image/webp;base64,${x.foto}" alt="">` : ''}</div>
+        <div class="rec-txt"><b>${esc(x.produto.codigo)}</b> ${esc(A.bonito(x.produto.nome))}<small>Da ${esc(x.deNome)} · ${esc(x.em)}${x.por ? ' · ' + esc(x.por) : ''}</small>
+          <label class="campo">Categoria<input data-cat value="${esc(cats.includes(x.produto.categoria) ? x.produto.categoria : '')}" placeholder="${esc(x.produto.categoria)}" list="catsRecebidos"></label></div>
+        <div class="rec-acoes"><button class="btn btn-claro btn-p" type="button" data-recusar>Recusar</button><button class="btn btn-laranja btn-p" type="button" data-aceitar>Aceitar</button></div>
+      </li>`).join('')}</ul><datalist id="catsRecebidos">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+      <div class="acoes"><button class="btn btn-claro" type="button" data-n>Fechar</button></div>`);
+    $('[data-n]', m).onclick = () => m.close();
+    m.onclick = async e => {
+      const b = e.target.closest('[data-aceitar],[data-recusar]'); if (!b) return;
+      const li = b.closest('li'), x = itens.find(y => y.id === li.dataset.id);
+      if (b.dataset.recusar !== undefined) {
+        await api('transferirRecusar', { id: x.id });
+        toast(`${x.produto.codigo} recusado. Na ${x.deNome} ele continua na lixeira, se precisar voltar.`);
+      } else {
+        const cat = $('[data-cat]', li).value.trim() || x.produto.categoria || 'Outros';
+        if (E.produtos.some(p => norm(p.codigo) === norm(x.produto.codigo))) { toast(`Já existe um produto ${x.produto.codigo} aqui. Mude o código dele antes de aceitar.`, true); return; }
+        const r = await api('transferirAceitar', { id: x.id });
+        if (!r.ok) { toast(r.erro, true); return; }
+        lembrar('Recebido da ' + r.de + ': ' + x.produto.codigo);
+        E.produtos.push({ ...r.produto, categoria: cat });
+        preencherFiltros(); desenharProdutos(); alterado([x.produto.codigo]);
+        toast(`${x.produto.codigo} entrou em "${cat}". Publique para aparecer no catálogo.`);
+      }
+      itens = itens.filter(y => y !== x); li.remove();
+      if (!itens.length) m.close();
+      verRecebidos();
+    };
+  }
+  setInterval(() => { if (!$('#app').hidden) verRecebidos(); }, 60000);
+
   function abrirMenuLinha(i, btn) {
     fecharMenuLinha();
     const p = E.produtos[i];
@@ -1163,7 +1237,7 @@
     m.className = 'menu-linha'; m.setAttribute('role', 'menu');
     const item = (campo, rot, on) => `<button type="button" role="menuitemcheckbox" aria-checked="${on}" data-alternar="${campo}"><span class="ml-check" aria-hidden="true">${on ? '✓' : ''}</span>${rot}</button>`;
     m.innerHTML = item('esgotado', 'Esgotado', !!p.esgotado) + item('ativo', 'Visível no catálogo', p.ativo !== false) + item('destaque', 'Destaque', !!p.destaque)
-      + '<hr><button type="button" role="menuitem" data-ml="editar">Editar produto</button><button type="button" role="menuitem" data-ml="organizar">Posição na tabela</button>';
+      + '<hr><button type="button" role="menuitem" data-ml="editar">Editar produto</button><button type="button" role="menuitem" data-ml="organizar">Posição na tabela</button><button type="button" role="menuitem" data-ml="mover">Mover para outra marca…</button>';
     document.body.appendChild(m);
     const r = btn.getBoundingClientRect();
     const alto = m.offsetHeight;
@@ -1182,7 +1256,7 @@
         desenharProdutos();
         requestAnimationFrame(() => { const tr = $(`#linhas tr[data-i="${i}"]`); if (tr) { tr.classList.add('acendeu'); requestAnimationFrame(() => requestAnimationFrame(() => tr.classList.remove('acendeu'))); } });
       }
-      if (o) { fecharMenuLinha(); if (o.dataset.ml === 'editar') abrirEditor(i); else { irPara('categorias'); abrirOrdemProdutos(p.categoria); } }
+      if (o) { fecharMenuLinha(); if (o.dataset.ml === 'editar') abrirEditor(i); else if (o.dataset.ml === 'mover') moverParaMarca(i); else { irPara('categorias'); abrirOrdemProdutos(p.categoria); } }
     });
     m.addEventListener('keydown', e => {
       const bs = [...m.querySelectorAll('button')], k = bs.indexOf(document.activeElement);
@@ -1885,8 +1959,8 @@
   }
   function desenharSpecsEd() {
     $('#edSpecs').innerHTML = edSpecs.map((p, k) => `<div class="spec-ed" data-k="${k}">
-        <input data-parte="r" value="${esc(p.r)}" placeholder="Rótulo (ex.: Tela)">
-        <input data-parte="v" value="${esc(p.v)}" placeholder="Valor (ex.: 7&quot; IPS)">
+        <input data-parte="r" value="${esc(p.r)}" placeholder="Rótulo (ex.: Tela)" spellcheck="true" lang="pt-BR">
+        <input data-parte="v" value="${esc(p.v)}" placeholder="Valor (ex.: 7&quot; IPS)" spellcheck="true" lang="pt-BR">
         <button type="button" data-tirar="${k}" aria-label="Remover">✕</button>
       </div>`).join('');
     $('#btnAddSpec').hidden = edSpecs.length >= MAX_SPECS;
@@ -1904,11 +1978,20 @@
     $$('.spec-ed [data-parte="r"]', $('#edSpecs')).slice(-1)[0].focus();
   });
   $('#edSpecs').addEventListener('click', e => { const b = e.target.closest('[data-tirar]'); if (b) { edSpecs = lerPares(); edSpecs.splice(+b.dataset.tirar, 1); if (!edSpecs.length) edSpecs.push({ r: '', v: '' }); desenharSpecsEd(); } });
+  // português: ao sair do nome ou de uma especificação, corrige erros conhecidos e acentos (e avisa o que mudou)
+  const corrigirCampo = el => {
+    if (!window.Portugues || !el || !el.value) return;
+    const r = window.Portugues.corrigir(el.value);
+    if (r.texto !== el.value) { el.value = r.texto; if (r.trocas.length) toast('Português corrigido: ' + r.trocas.join(', ')); }
+  };
+  $('#eNome').addEventListener('change', e => corrigirCampo(e.target));
+  $('#edSpecs').addEventListener('change', e => { if (e.target.dataset.parte) corrigirCampo(e.target); });
   // Enter no valor cria a próxima linha
   $('#edSpecs').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.parte) { e.preventDefault(); if (!$('#btnAddSpec').hidden) $('#btnAddSpec').click(); } });
 
   $('#formEd').addEventListener('submit', e => {
     e.preventDefault();
+    corrigirCampo($('#eNome')); $$('#edSpecs [data-parte]').forEach(corrigirCampo);
     const codigo = $('#eCodigo').value.trim();
     let nome = $('#eNome').value.trim();
     // nome igual ao de antes (só mudou maiúscula/minúscula na tela): guarda como estava, para não virar uma "alteração" na revisão
@@ -2318,7 +2401,8 @@
     const v = n => (col(n) >= 0 ? r[col(n)] : undefined);
     o.codigo = String(v('CODIGO')).trim();
     if (v('CATEGORIA') !== undefined && String(v('CATEGORIA')).trim()) o.categoria = String(v('CATEGORIA')).trim();
-    if (v('NOME') !== undefined && String(v('NOME')).trim()) o.nome = String(v('NOME')).trim();
+    const pt = t => (window.Portugues ? window.Portugues.corrigir(t).texto : t);
+    if (v('NOME') !== undefined && String(v('NOME')).trim()) o.nome = pt(String(v('NOME')).trim());
     if (v('PRECO') !== undefined && String(v('PRECO')).trim() !== '') o.preco = typeof v('PRECO') === 'number' ? v('PRECO') : parsePreco(v('PRECO'));
     if (v('PRECO PROMO') !== undefined) { const t = String(v('PRECO PROMO')).trim(); o.promo = t === '' ? null : (typeof v('PRECO PROMO') === 'number' ? v('PRECO PROMO') : parsePreco(t)); }
     if (v('PROMO INICIO') !== undefined) o.promoDe = dataISO(v('PROMO INICIO'));
@@ -2327,7 +2411,7 @@
     ['ESGOTADO', 'ATIVO', 'DESTAQUE'].forEach(h => { const b = simNao(v(h)); if (b != null) o[h.toLowerCase()] = b; });
     if (v('ESTOQUE') !== undefined && String(v('ESTOQUE')).trim() !== '') { const n = parsePreco(v('ESTOQUE')); if (n != null) { o.esgotado = n <= 0; o.estoque = Math.round(n); } }
     const specs = []; let temSpec = false;
-    for (let k = 1; k <= MAX_SPECS; k++) if (col('ESPEC ' + k) >= 0) { temSpec = true; const s = String(v('ESPEC ' + k)).trim(); if (s) specs.push(s); }
+    for (let k = 1; k <= MAX_SPECS; k++) if (col('ESPEC ' + k) >= 0) { temSpec = true; const s = String(v('ESPEC ' + k)).trim(); if (s) specs.push(pt(s)); }
     if (temSpec) o.specs = specs;
     const fotos = []; let temFoto = false;
     for (let k = 1; k <= 12; k++) if (col('FOTO ' + k) >= 0) { temFoto = true; const s = String(v('FOTO ' + k)).trim(); if (s) fotos.push(s); }

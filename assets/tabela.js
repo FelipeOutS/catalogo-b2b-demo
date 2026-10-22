@@ -31,20 +31,56 @@
     if (cfg.descontoGeral > 0 && p.precoFinal != null) p = { ...p, precoFinal: Math.round(p.precoFinal * (1 - cfg.descontoGeral / 100) * 100) / 100 };
     const o = cfg.semPreco ? 0 : cfg.descontoGeral > 0 ? (p.preco && p.precoFinal < p.preco ? Math.round((1 - p.precoFinal / p.preco) * 100) : 0) : desconto(p);
     const nv = p.novidade;
-    const specs = p.specs.slice(0, 4).map(s => `<div><dt>${esc(s.rotulo || 'Detalhe')}</dt><dd>${esc(s.valor)}</dd></div>`).join('');
+    // especificação em negrito, informação em fonte leve (linha sem "Especificação:" sai toda em negrito); as que não cabem saem inteiras (nunca cortadas no meio)
+    const specs = p.specs.slice(0, 6).map(s => `<li>${s.rotulo ? `<b>${esc(s.rotulo)}:</b> ${esc(s.valor)}` : `<b>${esc(s.valor)}</b>`}</li>`).join('');
     const preco = cfg.semPreco ? '<div><span class="d-valor d-consulte">Consulte seu vendedor</span></div>'
       : p.precoFinal == null
       ? '<div><span class="d-valor">Consulte</span></div>'
       : `<div>${o ? `<span class="d-de">${num(p.preco)}</span>` : nv && nv.de ? `<span class="d-de">${num(nv.de)}</span>` : ''}<span class="d-valor">${num(p.precoFinal)}<small>/un.</small></span></div>`;
-    const caixa = cfg.semPreco || p.precoFinal == null ? `<div class="d-cx">Caixa c/ ${esc(p.pcsTxt || pcsN(p))} un.</div>` : `<div class="d-cx">Caixa c/ ${esc(p.pcsTxt || pcsN(p))} un.<b>${num(p.precoFinal * pcsN(p))}</b></div>`;
+    const caixa = `<div class="d-cx">PCS/CX: <b>${esc(p.pcsTxt || pcsN(p))}</b></div>`;
     return `<div class="d-c ${p.esgotado ? 'esg' : ''}">
       <div class="d-img">${p.fotos[0] ? `<img src="${esc(fotoPdf(p.fotos[0]))}" data-orig="${esc(p.fotos[0])}" onerror="if(this.dataset.orig&&this.src.indexOf(this.dataset.orig)<0)this.src=this.dataset.orig" alt="">` : ''}<span class="d-cod">${esc(p.codigo)}</span>${o && !p.esgotado ? `<span class="d-off">−${o}%</span>` : ''}${p.esgotado ? '<span class="d-esg">ESGOTADO</span>' : ''}${nv ? `<span class="d-nov d-nov-${esc(nv.tipo)}">${esc(nv.txt)}</span>` : ''}</div>
       <div class="d-corpo">
         <h3 class="d-nome">${esc(p.nome)}</h3>
-        <dl class="d-specs">${specs}</dl>
+        <ul class="d-specs">${specs}</ul>
         <div class="d-pe ${o ? 'promo' : ''}">${preco}${caixa}</div>
       </div>
     </div>`;
+  }
+
+  // Todos os cartões de uma linha da página começam o texto na mesma altura: a foto tem a mesma altura nos três,
+  // calculada pelo cartão com mais texto (entre 26 e 47 mm). Se mesmo assim faltar espaço, a última especificação
+  // sai inteira (nunca cortada no meio).
+  // texto que quebra por pouco: aperta o espaço entre letras e, se preciso, a fonte (até 88%) para caber numa linha;
+  // se ainda assim não couber, volta ao normal e fica em duas linhas
+  function apertar(el) {
+    const linha = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.2;
+    if (el.scrollHeight < linha * 1.5) return;
+    const fs0 = parseFloat(getComputedStyle(el).fontSize);
+    for (const [ls, k] of [[-0.01, 1], [-0.02, 1], [-0.02, 0.96], [-0.025, 0.92], [-0.03, 0.88]]) {
+      el.style.letterSpacing = ls + 'em'; el.style.fontSize = fs0 * k + 'px';
+      if (el.scrollHeight < linha * k * 1.5) return;
+    }
+    el.style.letterSpacing = ''; el.style.fontSize = '';
+  }
+  function alinharCartoes() {
+    document.querySelectorAll('.d-nome, .d-specs li').forEach(apertar);
+    const mm = 96 / 25.4, MAX = 47 * mm, MIN = 26 * mm;
+    document.querySelectorAll('.grade').forEach(g => {
+      const linhas = new Map();
+      g.querySelectorAll('.d-c:not(.d-anon):not(.d-vazio)').forEach(c => { const t = Math.round(c.offsetTop); if (!linhas.has(t)) linhas.set(t, []); linhas.get(t).push(c); });
+      linhas.forEach(cartoes => {
+        // espaço que sobra para a foto em cada cartão = altura do cartão − texto (nome, especificações, rodapé)
+        // mede o texto no tamanho natural (sem o rodapé esticado até o fim do cartão)
+        const livre = cartoes.map(c => { const co = c.querySelector('.d-corpo'); co.style.flex = 'none'; const h = c.clientHeight - co.offsetHeight; co.style.flex = ''; return h; });
+        const h = Math.max(MIN, Math.min(MAX, ...livre));
+        cartoes.forEach(c => {
+          c.querySelector('.d-img').style.height = h + 'px';
+          const ul = c.querySelector('.d-specs');
+          while (ul && ul.children.length > 1 && c.scrollHeight > c.clientHeight + 1) ul.lastElementChild.remove();
+        });
+      });
+    });
   }
 
   function montar() {
@@ -123,6 +159,7 @@
     });
 
     document.getElementById('folhas').innerHTML = folhas.join('');
+    document.fonts.ready.then(alinharCartoes);
     document.title = `${nov ? 'Novidades' : 'Tabela'} Aiker ${hoje.replace(/\//g, '-')}`;
     ajustarZoom();
     // PDF salvo pelo sistema na pasta da atualização: já deixa as fotos leves antes de imprimir

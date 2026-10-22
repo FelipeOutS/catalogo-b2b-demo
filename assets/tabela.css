@@ -157,3 +157,40 @@ body { background: #5b5352; font-family: var(--sans); color: #231c1b; }
 .nov-capa li b { display: block; font: 800 26pt/1.1 'Barlow', sans-serif; color: #2b2523; }
 .nov-capa footer { position: absolute; left: 22mm; right: 22mm; bottom: 16mm; font: 500 9pt 'Barlow', sans-serif; color: #8a817b; }
 .d-vazio { visibility: hidden; }
+
+/* ===== cartão v2 (22/10/2026): foto maior, "Especificação: informação", rodapé só preço + PCS/CX ===== */
+.d-img { height: 47mm; padding: 2.4mm 4mm 1.6mm; background: #f6f6f5; }
+.d-corpo { padding: 2.2mm 3.2mm 0; }
+.d-nome { font: 700 9.8pt/1.15 'Barlow', sans-serif; letter-spacing: -.005em; }
+.d-specs { flex: 1; min-height: 0; overflow: hidden; list-style: none; display: block; margin: 1.5mm 0 1.4mm; padding: 0; font: 300 7.4pt/1.3 'Barlow', sans-serif; color: #36322f; }
+.d-specs li { margin-bottom: .55mm; }
+.d-specs b { font-weight: 600; color: #161413; }
+.d-pe { align-items: center; padding: 1.8mm 3.2mm 2.8mm; border-top-color: #ece8e4; }
+.d-cx { padding: 0; font: 500 7.4pt/1 'Barlow', sans-serif; letter-spacing: .03em; text-transform: uppercase; color: #5a5450; }
+.d-cx b { display: inline; font: 700 8pt/1 'Barlow', sans-serif; color: #161413; letter-spacing: 0; }
+/* código numa linha própria acima da foto (nada por cima do produto); selos nas laterais; nome em maiúsculas */
+.d-img { padding: 9.6mm 4mm 2mm; }
+.d-img:has(.d-apps), .d-img:has(.d-sel) { padding-left: 11.5mm; padding-right: 11.5mm; }
+.d-sel { top: 9.6mm; bottom: 2mm; flex-direction: column; justify-content: space-between; align-items: flex-start; }
+.d-sel-visao, .d-sel-cert { height: auto; }
+.d-sel-visao img { width: 7mm; height: auto; }
+.d-sel-cert img { width: 7mm; height: auto; }
+.d-off ~ .d-apps { top: 9.6mm; }
+.d-nome { font: 700 10.4pt/1.12 'Barlow', sans-serif; text-transform: uppercase; letter-spacing: .01em; color: #111; }
+/* a foto se ajusta ao texto: com mais especificações ela diminui (mínimo 26 mm), assim nenhuma informação fica de fora */
+.d-img { flex: 1 1 47mm; height: auto; min-height: 26mm; }
+.d-img > img { position: absolute; top: 9.6mm; bottom: 2mm; left: 4mm; width: calc(100% - 8mm); height: calc(100% - 11.6mm); }
+.d-img:has(.d-apps) > img, .d-img:has(.d-sel) > img { left: 11.5mm; width: calc(100% - 23mm); }
+.d-corpo { flex: none; }
+.d-specs { flex: none; overflow: visible; }
+.d-pe { margin-top: 0; }
+
+/* alinhamento: a foto tem a altura definida pela linha (alinharCartoes); rodapé sempre da mesma altura,
+   com o espaço do preço riscado reservado mesmo sem promoção */
+.d-img { flex: none; height: 47mm; min-height: 0; }
+.d-pe { height: 12.5mm; box-sizing: border-box; padding-top: 0; padding-bottom: 1.2mm; align-items: flex-end; }
+.d-pe > div:first-child { padding-bottom: .4mm; }
+.d-cx { padding-bottom: 1.3mm; }
+/* o rodapé (preço e PCS/CX) fica preso no fim do cartão: o preço também alinha na linha */
+.d-corpo { flex: 1 1 auto; }
+.d-pe { margin-top: auto; }

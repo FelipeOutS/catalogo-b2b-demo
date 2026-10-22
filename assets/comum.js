@@ -169,7 +169,8 @@
       if (promo != null && !promoNoPrazo(p.promoDe, p.promoAte)) promo = null;
       const specs = (p.specs || []).filter(Boolean).map(s => {
         const m = String(s).match(/^([^:]{1,60}):\s*(.*)$/);
-        return m ? { rotulo: bonito(m[1].trim(), 'frase'), valor: bonito(m[2].trim(), 'frase') } : { rotulo: '', valor: bonito(String(s), 'frase') };
+        const rot = m && m[1].trim();
+        return m ? { rotulo: /^[A-Z0-9]+(?:[-./][A-Z0-9]+)+$/.test(rot) ? rot : bonito(rot, 'frase'), valor: bonito(m[2].trim(), 'frase') } : { rotulo: '', valor: bonito(String(s), 'frase') };
       });
       const fotos = (p.fotos || []).map(fotoUrl).filter(Boolean);
       const pcsTxt = String(p.pcs == null ? '' : p.pcs);

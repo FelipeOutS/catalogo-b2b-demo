@@ -7,7 +7,7 @@
   <title>Aiker · Painel administrativo</title>
   <link rel="icon" href="img/icone.png">
   <link rel="stylesheet" href="assets/vendor/fontes.css">
-  <link rel="stylesheet" href="assets/admin.css?v=aiker2">
+  <link rel="stylesheet" href="assets/admin.css?v=mover2">
   <style>.demo-aviso{margin:6px 0 12px;padding:8px 12px;border-radius:10px;background:#fff3ec;color:#a8401c;font-size:13px}</style>
 </head>
 <body>
@@ -82,6 +82,7 @@
       <!-- INÍCIO -->
       <section class="aba" id="aba-inicio">
         <div class="cab"><div><h1 id="iniTitulo">Início</h1><p>O que está no ar e o que precisa da sua atenção.</p></div></div>
+        <div class="recebidos" id="recebidos" hidden></div>
         <div id="inicio"></div>
       </section>
 
@@ -410,7 +411,7 @@
         <div class="ed-bloco grade2">
           <label class="campo">Código<input id="eCodigo" required></label>
           <label class="campo">Categoria<input id="eCategoria" data-cat autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" required></label>
-          <label class="campo inteiro">Nome<input id="eNome" required></label>
+          <label class="campo inteiro">Nome<input id="eNome" required spellcheck="true" lang="pt-BR"></label>
           <label class="campo">Preço unitário (R$)<input id="ePreco" inputmode="decimal" placeholder="0,00"></label>
           <label class="campo">Preço promocional (R$)<input id="ePromo" inputmode="decimal" placeholder="Vazio = sem promoção"></label>
           <label class="campo">Peças por caixa<input id="ePcs" placeholder="Ex.: 50"></label>
@@ -467,7 +468,8 @@
 
   <script src="config.js?v=202610211243"></script>
   <script src="assets/comum.js?v=202610211243"></script>
-  <script src="assets/admin.js?v=202610211243"></script>
+  <script src="assets/portugues.js?v=1"></script>
+  <script src="assets/admin.js?v=pt2"></script>
   <script src="assets/admin-extra.js?v=1"></script>
 </body>
 </html>

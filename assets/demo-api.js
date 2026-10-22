@@ -187,6 +187,9 @@
       case 'pastaAtualizacao': return { ok: true, ativo: false, base: 'D:\\IKANOO', arquivos: [], previa: '' };
       case 'pastaAtualizacaoSalvar':
       case 'abrirPastaAtualizacao': return { ok: false, erro: 'Na demonstração não há pasta no computador.' };
+      // mover para outra marca: na demonstração só existe esta marca
+      case 'marcasIrmas': return { ok: false, erro: 'Na demonstração só existe esta marca.' };
+      case 'transferenciasRecebidas': return { ok: true, itens: [] };
       default: return { ok: false, erro: 'Ação desconhecida' };
     }
   }
