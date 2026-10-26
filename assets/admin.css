@@ -466,6 +466,8 @@ dialog:focus, dialog:focus-visible { outline: none; }
 .vend-info code { font: 600 12px var(--fonte); background: var(--tile); padding: 1px 6px; border-radius: 5px; color: var(--texto); }
 .modal .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .modal .grade2 .inteiro { grid-column: 1 / -1; }
+.precos3 { display: grid; grid-template-columns: 1fr 120px 1fr; gap: 0 12px; }
+@media (max-width: 560px) { .precos3 { grid-template-columns: 1fr; } }
 /* imagens de capa */
 .capas { display: grid; gap: 14px; margin-bottom: 14px; }
 .capa-slot { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px; align-items: center; padding: 10px; border: 1px solid var(--linha-2); border-radius: 8px; }

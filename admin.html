@@ -412,8 +412,12 @@
           <label class="campo">Código<input id="eCodigo" required></label>
           <label class="campo">Categoria<input id="eCategoria" data-cat autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" required></label>
           <label class="campo inteiro">Nome<input id="eNome" required spellcheck="true" lang="pt-BR"></label>
-          <label class="campo">Preço unitário (R$)<input id="ePreco" inputmode="decimal" placeholder="0,00"></label>
-          <label class="campo">Preço promocional (R$)<input id="ePromo" inputmode="decimal" placeholder="Vazio = sem promoção"></label>
+          <div class="precos3 inteiro">
+            <label class="campo">Preço unitário (R$)<input id="ePreco" inputmode="decimal" placeholder="0,00"></label>
+            <label class="campo">Desconto (%)<input id="ePct" inputmode="decimal" placeholder="Ex.: 20"></label>
+            <label class="campo">Preço promocional (R$)<input id="ePromo" inputmode="decimal" placeholder="Vazio = sem promoção"></label>
+          </div>
+          <p class="dica inteiro" style="margin-top:-6px">Digite o desconto ou o preço promocional: um calcula o outro. Se o preço unitário mudar depois, o desconto continua e o promocional se ajusta sozinho.</p>
           <label class="campo">Peças por caixa<input id="ePcs" placeholder="Ex.: 50"></label>
           <label class="campo">Estoque (unidades)<input id="eEstoque" inputmode="numeric" placeholder="Vazio = não informado"></label>
           <label class="campo">Promoção começa em<input type="date" id="ePromoDe"></label>

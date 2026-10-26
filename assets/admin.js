@@ -23,6 +23,24 @@
   };
   const fmt = n => (n == null || n === '' || isNaN(n) ? '' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const brl = A.brl;
+  // desconto da promoção em %: o produto guarda o % (descontoPct) e o preço promocional acompanha o preço normal
+  const semValor = v => v == null || v === '' || isNaN(v);
+  const r2 = n => Math.round(n * 100) / 100;
+  const pctDe = (preco, promo) => (semValor(preco) || semValor(promo) || +preco <= 0 || +promo >= +preco ? null : r2((1 - promo / preco) * 100));
+  const promoPeloPct = (preco, pct) => (semValor(preco) || semValor(pct) || +pct <= 0 || +pct >= 100 ? null : r2(preco * (1 - pct / 100)));
+  const fmtPct = n => (semValor(n) ? '' : Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 }));
+  const pctDoProduto = p => (semValor(p.promo) ? null : !semValor(p.descontoPct) ? +p.descontoPct : pctDe(p.preco, p.promo));
+  const fotoPromo = p => ({ preco: p.preco, promo: p.promo, descontoPct: p.descontoPct });
+  // depois de mexer no preço, na promoção ou no % (antes = fotoPromo de como estava): deixa os três de acordo
+  function acertarPromo(p, antes) {
+    const num = v => (semValor(v) ? null : +v);
+    const pctAntes = pctDoProduto(antes);
+    if (p.descontoPct !== antes.descontoPct && num(p.descontoPct) !== pctAntes) p.promo = promoPeloPct(p.preco, p.descontoPct); // mudou o %
+    else if (num(p.promo) !== num(antes.promo)) p.descontoPct = pctDe(p.preco, p.promo); // mudou o promocional
+    else if (num(p.preco) !== num(antes.preco) && pctAntes != null && num(p.preco) != null) { p.descontoPct = pctAntes; p.promo = promoPeloPct(p.preco, pctAntes); } // mudou o preço: mantém o %
+    if (semValor(p.promo)) p.promo = null;
+    if (semValor(p.descontoPct) || p.promo == null) delete p.descontoPct;
+  }
   // o aviso fica guardado aqui: se ele estiver dentro de uma janela que é redesenhada, é só colocá-lo de volta
   const toastEl = document.getElementById('toast');
   function toast(t, erro) {
@@ -1150,7 +1168,7 @@
     if (p.esgotado) s.push('<span class="selo s-esg">Esgotado</span>');
     if (p.ativo === false) s.push('<span class="selo s-oculto">Oculto</span>');
     const promo = p.promo != null && p.promo !== '' && +p.promo < +p.preco;
-    if (promo && !p.esgotado) s.push(`<span class="selo s-promo${A.promoNoPrazo(p.promoDe, p.promoAte) ? '' : ' fora'}" title="${A.promoNoPrazo(p.promoDe, p.promoAte) ? 'Promoção valendo' : 'Promoção fora do prazo'}">−${Math.round((1 - p.promo / p.preco) * 100)}%</span>`);
+    if (promo && !p.esgotado) s.push(`<span class="selo s-promo${A.promoNoPrazo(p.promoDe, p.promoAte) ? '' : ' fora'}" title="${A.promoNoPrazo(p.promoDe, p.promoAte) ? 'Promoção valendo' : 'Promoção fora do prazo'}">−${fmtPct(Math.round(pctDe(p.preco, p.promo) * 10) / 10)}%</span>`);
     if (p.destaque) s.push(`<span class="selo s-dest">${ICO_ESTRELA}Destaque</span>`);
     if (poucas(p)) s.push('<span class="selo s-poucas">Últimas un.</span>');
     return s.length ? `<div class="selos">${s.join('')}</div>` : '<span class="s-ok">Disponível</span>';
@@ -1625,14 +1643,15 @@
     const p = E.produtos[+tr.dataset.i];
     lembrar(`${p.codigo}: ${({ preco: 'preço', promo: 'promoção', pcs: 'peças por caixa', esgotado: 'esgotado', ativo: 'visível', destaque: 'destaque' })[campo]}`);
     if (campo === 'preco' || campo === 'promo') {
-      const v = parsePreco(e.target.value);
-      p[campo] = v;
-      e.target.value = fmt(v);
-      e.target.dataset.orig = e.target.value;
+      const antes = fotoPromo(p);
+      p[campo] = parsePreco(e.target.value);
+      acertarPromo(p, antes);
+      ['preco', 'promo'].forEach(c => { const inp = $(`input[data-campo="${c}"]`, tr); inp.value = inp.dataset.orig = fmt(p[c]); });
     } else if (campo === 'pcs') { p.pcs = e.target.value.trim(); e.target.dataset.orig = p.pcs; }
     else if (campo === 'ativo') p.ativo = e.target.checked;
     else p[campo] = e.target.checked;
     $('.vcx', tr).textContent = valorCaixa(p);
+    $('.c-sit', tr).innerHTML = selosSituacao(p);
     tr.classList.add('mudou', 'acendeu');
     requestAnimationFrame(() => requestAnimationFrame(() => tr.classList.remove('acendeu')));
     tr.classList.toggle('oculto', p.ativo === false);
@@ -1774,7 +1793,8 @@
       m.close();
       const de = $('#pmDe', m) ? $('#pmDe', m).value : '', ate = $('#pmAte', m) ? $('#pmAte', m).value : '';
       const tirar = modo() === 'tirar';
-      aplicarMassa(rot, p => { const v = novos.get(p.codigo); if (v !== undefined) { p.promo = v; p.promoDe = tirar ? '' : de; p.promoAte = tirar ? '' : ate; } });
+      const pct = tirar ? null : parsePreco($('#pmValor', m).value);
+      aplicarMassa(rot, p => { const v = novos.get(p.codigo); if (v !== undefined) { p.promo = v; if (v == null) delete p.descontoPct; else p.descontoPct = pct; p.promoDe = tirar ? '' : de; p.promoAte = tirar ? '' : ate; } });
     };
   }
 
@@ -1816,7 +1836,7 @@
       const campo = $('#ajCampo', m).value;
       const novos = new Map(l.map(p => [p.codigo, calc(p)]));
       m.close();
-      aplicarMassa('Preços ajustados', p => { const v = novos.get(p.codigo); if (v != null) p[campo] = v; });
+      aplicarMassa('Preços ajustados', p => { const v = novos.get(p.codigo); if (v != null) { const antes = fotoPromo(p); p[campo] = v; acertarPromo(p, antes); } });
     };
   }
 
@@ -1834,6 +1854,7 @@
     $('#eNome').value = A.bonito(p.nome || '');
     $('#ePreco').value = fmt(p.preco);
     $('#ePromo').value = fmt(p.promo);
+    $('#ePct').value = fmtPct(pctDoProduto(p));
     $('#ePcs').value = p.pcs || '';
     $('#eEstoque').value = p.estoque ?? '';
     $('#ePromoDe').value = p.promoDe || '';
@@ -1989,6 +2010,12 @@
   // Enter no valor cria a próxima linha
   $('#edSpecs').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.parte) { e.preventDefault(); if (!$('#btnAddSpec').hidden) $('#btnAddSpec').click(); } });
 
+  // preço, desconto (%) e promocional se calculam um pelo outro enquanto a pessoa digita
+  const lerEd = id => parsePreco($(id).value);
+  $('#ePreco').addEventListener('input', () => { const pct = lerEd('#ePct'); if (pct != null) $('#ePromo').value = fmt(promoPeloPct(lerEd('#ePreco'), pct)); });
+  $('#ePct').addEventListener('input', () => { const pct = lerEd('#ePct'); $('#ePromo').value = pct == null ? '' : fmt(promoPeloPct(lerEd('#ePreco'), pct)); });
+  $('#ePromo').addEventListener('input', () => { $('#ePct').value = fmtPct(pctDe(lerEd('#ePreco'), lerEd('#ePromo'))); });
+
   $('#formEd').addEventListener('submit', e => {
     e.preventDefault();
     corrigirCampo($('#eNome')); $$('#edSpecs [data-parte]').forEach(corrigirCampo);
@@ -2004,17 +2031,21 @@
     lembrar(antes ? 'Edição de ' + antes.codigo : 'Novo produto ' + codigo);
     const p = {
       codigo, categoria, nome,
-      preco: parsePreco($('#ePreco').value), promo: parsePreco($('#ePromo').value),
+      preco: parsePreco($('#ePreco').value), promo: parsePreco($('#ePromo').value), descontoPct: parsePreco($('#ePct').value),
       pcs: $('#ePcs').value.trim(), estoque: lerEstoque($('#eEstoque').value), promoDe: $('#ePromoDe').value || '', promoAte: $('#ePromoAte').value || '',
       esgotado: $('#eEsgotado').checked, ativo: $('#eAtivo').checked, destaque: $('#eDestaque').checked,
       specs: lerSpecs(), fotos: edFotos.slice(),
     };
+    // o % só fica guardado se bate com o promocional (senão vale o % calculado dos dois preços)
+    if (p.promo == null || p.descontoPct == null || promoPeloPct(p.preco, p.descontoPct) !== p.promo) p.descontoPct = pctDe(p.preco, p.promo);
+    if (p.descontoPct == null) delete p.descontoPct;
     if (antes) {
       // nada mudou de verdade (só maiúsculas na tela, ou campos vazios): guarda como estava, sem criar "alteração" na revisão
       if (norm(JSON.stringify(p.specs)) === norm(JSON.stringify(antes.specs || []))) p.specs = antes.specs || [];
       ['estoque', 'promoDe', 'promoAte'].forEach(k => { if ((p[k] == null || p[k] === '') && !(k in antes)) delete p[k]; });
       // mantém o que o editor não mostra (nova linha e espaços do Organizar tabela, por exemplo)
       E.produtos[edIdx] = Object.assign({}, antes, p);
+      if (!('descontoPct' in p)) delete E.produtos[edIdx].descontoPct;
     }
     else {
       // novo: entra no fim da categoria escolhida
@@ -2254,8 +2285,8 @@
       const criar = previaNovos.filter(x => x.acao === 'novo');
       lembrar('Atualização de preços (' + (sel.length + vinc.length + criar.length) + ')');
       const tocados = [];
-      sel.forEach(x => { x.p.preco = x.novoPreco; x.p.esgotado = x.novoEsg; if (x.estoque != null) x.p.estoque = x.estoque; tocados.push(x.p.codigo); });
-      vinc.forEach(x => { const p = E.produtos[+x.acao.slice(1)]; const c = calcMudanca(x, p); p.preco = c.novoPreco; p.esgotado = c.novoEsg; if (x.estoque != null) p.estoque = x.estoque; tocados.push(p.codigo); });
+      sel.forEach(x => { const antes = fotoPromo(x.p); x.p.preco = x.novoPreco; acertarPromo(x.p, antes); x.p.esgotado = x.novoEsg; if (x.estoque != null) x.p.estoque = x.estoque; tocados.push(x.p.codigo); });
+      vinc.forEach(x => { const p = E.produtos[+x.acao.slice(1)]; const c = calcMudanca(x, p); const antes = fotoPromo(p); p.preco = c.novoPreco; acertarPromo(p, antes); p.esgotado = c.novoEsg; if (x.estoque != null) p.estoque = x.estoque; tocados.push(p.codigo); });
       const existentes = new Set(E.produtos.map(p => compacto(p.codigo)));
       let criados = 0;
       criar.forEach(x => {
@@ -2346,15 +2377,15 @@
     if (m) { const ano = m[3].length === 2 ? '20' + m[3] : m[3]; return ano + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0'); }
     return '';
   }
-  const COLS = ['CODIGO', 'CATEGORIA', 'NOME', 'PRECO', 'PRECO PROMO', 'PROMO INICIO', 'PROMO FIM', 'PCS/CX', 'ESGOTADO', 'ESTOQUE', 'ATIVO', 'DESTAQUE'];
+  const COLS = ['CODIGO', 'CATEGORIA', 'NOME', 'PRECO', 'PRECO PROMO', 'DESCONTO %', 'PROMO INICIO', 'PROMO FIM', 'PCS/CX', 'ESGOTADO', 'ESTOQUE', 'ATIVO', 'DESTAQUE'];
   function montarPlanilha(semPreco) {
       const cab = [...COLS, ...Array.from({ length: MAX_SPECS }, (_, k) => 'ESPEC ' + (k + 1)), ...Array.from({ length: MAX_FOTOS }, (_, k) => 'FOTO ' + (k + 1))];
       const linhas = E.produtos.map(p => [
-        p.codigo, p.categoria, p.nome, p.preco ?? '', p.promo ?? '', dataBR(p.promoDe), dataBR(p.promoAte), p.pcs ?? '', p.esgotado ? 'SIM' : 'NÃO', p.estoque ?? '', p.ativo === false ? 'NÃO' : 'SIM', p.destaque ? 'SIM' : 'NÃO',
+        p.codigo, p.categoria, p.nome, p.preco ?? '', p.promo ?? '', pctDoProduto(p) ?? '', dataBR(p.promoDe), dataBR(p.promoAte), p.pcs ?? '', p.esgotado ? 'SIM' : 'NÃO', p.estoque ?? '', p.ativo === false ? 'NÃO' : 'SIM', p.destaque ? 'SIM' : 'NÃO',
         ...Array.from({ length: MAX_SPECS }, (_, k) => (p.specs || [])[k] || ''), ...Array.from({ length: MAX_FOTOS }, (_, k) => (p.fotos || [])[k] || ''),
       ]);
       // "sem preços": tira as colunas de valor (se a planilha voltar, os preços do painel não mudam)
-      const fica = cab.map((h, k) => (semPreco && /^(PRECO|PRECO PROMO|PROMO INICIO|PROMO FIM)$/.test(h) ? -1 : k)).filter(k => k >= 0);
+      const fica = cab.map((h, k) => (semPreco && /^(PRECO|PRECO PROMO|DESCONTO %|PROMO INICIO|PROMO FIM)$/.test(h) ? -1 : k)).filter(k => k >= 0);
       const cab2 = fica.map(k => cab[k]);
       const acento = { CODIGO: 'CÓDIGO', PRECO: 'PREÇO', 'PRECO PROMO': 'PREÇO PROMO', 'PROMO INICIO': 'PROMO INÍCIO' };
       const ws = XLSX.utils.aoa_to_sheet([cab2.map(h => acento[h] || h), ...linhas.map(l => fica.map(k => l[k]))]);
@@ -2385,7 +2416,7 @@
       // acha a linha do cabeçalho (a primeira que tem CODIGO)
       const iCab = rows.findIndex(r => r.some(c => norm(c) === 'CODIGO' || norm(c) === 'COD' || norm(c) === 'CÓDIGO'));
       if (iCab < 0) throw new Error('Não encontrei a coluna CÓDIGO na planilha.');
-      const cab = rows[iCab].map(h => norm(h).replace(/^COD$/, 'CODIGO').replace(/^PRECO UNITARIO$|^PRECO UN\.?$|^VALOR$/, 'PRECO').replace(/^PROMO(CAO)?$|^PRECO PROMOCIONAL$/, 'PRECO PROMO').replace(/^PCS ?CX$|^PCS$|^QTD ?CX$|^CAIXA$/, 'PCS/CX').replace(/^(PROMO(CAO)? )?(INICIO|DE|COMECA)( PROMO(CAO)?)?$/, 'PROMO INICIO').replace(/^(PROMO(CAO)? )?(FIM|ATE|TERMINA)( PROMO(CAO)?)?$/, 'PROMO FIM'));
+      const cab = rows[iCab].map(h => norm(h).replace(/^COD$/, 'CODIGO').replace(/^PRECO UNITARIO$|^PRECO UN\.?$|^VALOR$/, 'PRECO').replace(/^PROMO(CAO)?$|^PRECO PROMOCIONAL$/, 'PRECO PROMO').replace(/^PCS ?CX$|^PCS$|^QTD ?CX$|^CAIXA$/, 'PCS/CX').replace(/^(DESCONTO|DESC\.?) ?\(?%\)?$|^% ?(DE )?DESCONTO$/, 'DESCONTO %').replace(/^(PROMO(CAO)? )?(INICIO|DE|COMECA)( PROMO(CAO)?)?$/, 'PROMO INICIO').replace(/^(PROMO(CAO)? )?(FIM|ATE|TERMINA)( PROMO(CAO)?)?$/, 'PROMO FIM'));
       const linhas = rows.slice(iCab + 1).filter(r => String(r[cab.indexOf('CODIGO')] || '').trim());
       importacao = { cab, linhas, nomeArq: arq.name };
       previaImport();
@@ -2405,6 +2436,8 @@
     if (v('NOME') !== undefined && String(v('NOME')).trim()) o.nome = pt(String(v('NOME')).trim());
     if (v('PRECO') !== undefined && String(v('PRECO')).trim() !== '') o.preco = typeof v('PRECO') === 'number' ? v('PRECO') : parsePreco(v('PRECO'));
     if (v('PRECO PROMO') !== undefined) { const t = String(v('PRECO PROMO')).trim(); o.promo = t === '' ? null : (typeof v('PRECO PROMO') === 'number' ? v('PRECO PROMO') : parsePreco(t)); }
+    // % vazio na planilha não mexe (para tirar a promoção, apague o PREÇO PROMO)
+    if (v('DESCONTO %') !== undefined && String(v('DESCONTO %')).trim() !== '') { const n = typeof v('DESCONTO %') === 'number' ? v('DESCONTO %') : parsePreco(v('DESCONTO %')); if (n != null) o.descontoPct = r2(n > 0 && n < 1 && typeof v('DESCONTO %') === 'number' ? n * 100 : n); }
     if (v('PROMO INICIO') !== undefined) o.promoDe = dataISO(v('PROMO INICIO'));
     if (v('PROMO FIM') !== undefined) o.promoAte = dataISO(v('PROMO FIM'));
     if (v('PCS/CX') !== undefined && String(v('PCS/CX')).trim() !== '') o.pcs = String(v('PCS/CX')).trim();
@@ -2431,7 +2464,7 @@
       if (i == null) { novos++; if (!o.nome) semNome.push(o.codigo); return; }
       const p = E.produtos[i];
       const vazio = v => (v === undefined || v === null || v === '' ? null : v); // "sem data" e "célula vazia" são a mesma coisa
-      const muda = Object.keys(o).some(k => k !== 'codigo' && JSON.stringify(vazio(o[k])) !== JSON.stringify(vazio(p[k])));
+      const muda = Object.keys(o).some(k => k !== 'codigo' && JSON.stringify(vazio(o[k])) !== JSON.stringify(vazio(k === 'descontoPct' ? pctDoProduto(p) : p[k])));
       muda ? alterados++ : iguais++;
     });
     const naPlanilha = new Set(parciais.map(o => norm(o.codigo)));
@@ -2458,13 +2491,17 @@
             const i = porCod.get(norm(o.codigo));
             const base = i != null ? E.produtos[i] : { preco: null, promo: null, pcs: '', esgotado: false, ativo: true, destaque: false, specs: [], fotos: [], categoria: 'Outros' };
             tocados.push(o.codigo);
-            return { ...base, ...o };
+            const novo = { ...base, ...o };
+            acertarPromo(novo, fotoPromo(base));
+            return novo;
           });
         } else {
           parciais.forEach(o => {
             const i = porCod.get(norm(o.codigo));
-            if (i != null) { Object.assign(E.produtos[i], o); tocados.push(o.codigo); } else if (o.nome) {
-              E.produtos.push({ preco: null, promo: null, pcs: '', esgotado: false, ativo: true, destaque: false, specs: [], fotos: [], categoria: 'Outros', ...o });
+            if (i != null) { const antes = fotoPromo(E.produtos[i]); Object.assign(E.produtos[i], o); acertarPromo(E.produtos[i], antes); tocados.push(o.codigo); } else if (o.nome) {
+              const novo = { preco: null, promo: null, pcs: '', esgotado: false, ativo: true, destaque: false, specs: [], fotos: [], categoria: 'Outros', ...o };
+              acertarPromo(novo, { preco: null, promo: null });
+              E.produtos.push(novo);
               tocados.push(o.codigo);
             }
           });
