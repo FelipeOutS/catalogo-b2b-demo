@@ -635,3 +635,7 @@ dialog[open]::backdrop { background-color: rgba(15, 14, 14, .55); transition-dur
 .lateral-tit { font-size: 13.5px; font-weight: 700; color: var(--tinta); }
 .rodape-tit { font-size: 14px; font-weight: 700; }
 .promo-selo { font-size: 13px; }
+
+/* refino 27/10: código longo não quebra no meio; no celular a situação desce para a linha de baixo */
+.produto-topo { flex-wrap: wrap; row-gap: 2px; }
+.produto-cod { white-space: nowrap; }

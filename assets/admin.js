@@ -352,6 +352,7 @@
         <div class="ini-hero-txt">
           <h2>${!E.publicadoEm ? 'O catálogo ainda não foi publicado' : E.pendente ? (pend ? `${pend} produto${s(pend)} esperando publicação` : 'Há alterações esperando publicação') : 'Tudo publicado'}</h2>
           <p>${E.publicadoEm ? `No ar desde ${esc(quando)}: os clientes veem ${visiveis} produtos disponíveis em ${cats} categorias.` : 'Confira os produtos e clique em Publicar.'}${E.pendente ? ' As mudanças só aparecem para o cliente depois de publicar.' : ''}</p>
+          ${E.pastaAtu && E.pastaAtu.ultimo ? `<p class="ini-ult">Última pasta do dia (tabela em PDF e planilha): ${esc(E.pastaAtu.ultimo)}</p>` : ''}
         </div>
         <div class="ini-hero-acoes">
           ${E.pendente ? '<button class="btn btn-laranja" type="button" data-ini="publicar">Revisar e publicar</button>' : ''}
@@ -359,7 +360,7 @@
         </div>
       </div>
       ${diasBackup > 7 ? `<div class="ini-aviso"><div><b>${ultBackup ? 'Faz mais de uma semana desde o último backup' : 'Você ainda não baixou nenhum backup'}</b><small>O catálogo fica só neste computador. Guarde uma cópia num pendrive ou no Google Drive.</small></div><button class="btn btn-claro" type="button" data-ini="backup">Baixar backup agora</button></div>` : ''}
-      <div class="ini-tiles">${tiles.map(([k, rot, n, cl]) => `<button type="button" class="ini-tile ${cl}" data-sit-ini="${k}"><span>${rot}</span><b>${n}</b></button>`).join('')}</div>
+      <div class="ini-tiles">${tiles.map(([k, rot, n, cl]) => `<button type="button" class="ini-tile ${cl}${n ? '' : ' zero'}" data-sit-ini="${k}"><span>${rot}</span><b>${n}</b></button>`).join('')}</div>
       <div class="ini-dupla">
         <div class="cartao ini-mudancas">
           <h2>O que mudou desde a última publicação</h2>
@@ -1165,13 +1166,13 @@
   const ICO_ESTRELA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/></svg>';
   function selosSituacao(p) {
     const s = [];
-    if (p.esgotado) s.push('<span class="selo s-esg">Esgotado</span>');
+    if (p.esgotado) s.push('<span class="selo s-esg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2a8 8 0 0 1 6.32 12.9L7.1 5.68A7.96 7.96 0 0 1 12 4zM5.68 7.1l11.22 11.22A8 8 0 0 1 5.68 7.1z"/></svg>Esgotado</span>');
     if (p.ativo === false) s.push('<span class="selo s-oculto">Oculto</span>');
     const promo = p.promo != null && p.promo !== '' && +p.promo < +p.preco;
     if (promo && !p.esgotado) s.push(`<span class="selo s-promo${A.promoNoPrazo(p.promoDe, p.promoAte) ? '' : ' fora'}" title="${A.promoNoPrazo(p.promoDe, p.promoAte) ? 'Promoção valendo' : 'Promoção fora do prazo'}">−${fmtPct(Math.round(pctDe(p.preco, p.promo) * 10) / 10)}%</span>`);
     if (p.destaque) s.push(`<span class="selo s-dest">${ICO_ESTRELA}Destaque</span>`);
     if (poucas(p)) s.push('<span class="selo s-poucas">Últimas un.</span>');
-    return s.length ? `<div class="selos">${s.join('')}</div>` : '<span class="s-ok">Disponível</span>';
+    return s.length ? `<div class="selos">${s.join('')}</div>` : '<span class="s-ok"><i aria-hidden="true"></i>Disponível</span>';
   }
   let menuLinha = null;
   function fecharMenuLinha() { if (menuLinha) { menuLinha.remove(); menuLinha = null; } }
@@ -1598,7 +1599,7 @@
       const f = (p.fotos || [])[0];
       const marcado = sel.has(p.codigo);
       const nf = (p.fotos || []).length, ns = (p.specs || []).length;
-      return g + `<tr data-i="${i}" class="${p.ativo === false ? 'oculto' : ''} ${E.mudou.has(p.codigo) ? 'mudou' : ''} ${marcado ? 'sel' : ''}">
+      return g + `<tr data-i="${i}" class="${p.ativo === false ? 'oculto' : ''} ${p.esgotado ? 'esg' : ''} ${E.mudou.has(p.codigo) ? 'mudou' : ''} ${marcado ? 'sel' : ''}">
         <td class="c-sel"><input type="checkbox" data-sel ${marcado ? 'checked' : ''} aria-label="Selecionar ${esc(p.codigo)}"></td>
         <td class="c-foto"><div class="mini">${f ? `<img src="${esc(miniUrl(f))}" alt="" loading="lazy" decoding="async" width="44" height="44">` : '<span class="n">sem foto</span>'}</div></td>
         <td class="c-cod"><span class="cod">${esc(p.codigo)}</span></td>
@@ -2230,6 +2231,7 @@
   }
 
   function desenharPrevia() {
+    const varPct = (a, b) => { const v = (b - a) / a * 100; return (v > 0 ? '+' : '−') + Math.abs(v).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'; };
     const contaAplicar = () => previaPrecos.filter(x => x.marcado).length + previaNovos.filter(x => x.acao !== 'ignorar').length;
     const muda = previaPrecos.filter(x => x.muda).length;
     const esg = previaPrecos.filter(x => x.muda && x.novoEsg && !x.p.esgotado).length;
@@ -2263,13 +2265,24 @@
           return `<tr class="${x.muda ? '' : 'igual'}${x.estranho ? ' estranho' : ''}">
             <td><input type="checkbox" data-k="${k}" ${x.marcado ? 'checked' : ''} ${x.muda ? '' : 'disabled'}></td>
             <td><b>${esc(x.p.codigo)}</b><br><small>${esc(A.bonito(x.p.nome))}</small></td>
-            <td>${dp ? `<span class="de">${brl(x.p.preco)}</span><span class="para ${x.novoPreco > (x.p.preco || 0) ? 'sobe' : 'desce'}">${brl(x.novoPreco)}</span>${x.estranho ? `<br><span class="chip ruim">Confira: ${x.novoPreco <= 0 ? 'preço zerado' : (x.variacao > 0 ? '+' : '') + Math.round(x.variacao * 100) + '%'}</span>` : ''}` : brl(x.p.preco)}</td>
+            <td>${dp ? `<span class="de">${brl(x.p.preco)}</span><span class="para ${x.novoPreco > (x.p.preco || 0) ? 'sobe' : 'desce'}">${brl(x.novoPreco)}</span>${!x.estranho && x.p.preco > 0 ? `<span class="var ${x.novoPreco > x.p.preco ? 'sobe' : 'desce'}">${varPct(x.p.preco, x.novoPreco)}</span>` : ''}${x.estranho ? `<br><span class="chip ruim">Confira: ${x.novoPreco <= 0 ? 'preço zerado' : (x.variacao > 0 ? '+' : '') + Math.round(x.variacao * 100) + '%'}</span>` : ''}` : brl(x.p.preco)}</td>
             <td>${x.novoEsg !== !!x.p.esgotado ? (x.novoEsg ? '<span class="chip esg">Vai esgotar</span>' : '<span class="chip ok">Volta ao estoque</span>') : (x.novoEsg ? 'Esgotado' : 'Disponível')}${x.estoque != null ? `<br><small>estoque ${x.estoque}</small>` : ''}</td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>` : ''}
-      <button class="btn btn-escuro largo" type="button" id="btnAplicar"></button>`;
-    const contar = () => { const n = contaAplicar(); const b = $('#btnAplicar'); b.disabled = !n; b.textContent = `Aplicar ${n} alteraç${n === 1 ? 'ão' : 'ões'}`; };
+      <div class="aplicar-barra"><p class="resumo-aplicar" id="resumoAplicar" aria-live="polite"></p><button class="btn btn-escuro largo" type="button" id="btnAplicar"></button></div>`;
+    const contar = () => {
+      const n = contaAplicar(); const b = $('#btnAplicar'); b.disabled = !n; b.textContent = `Aplicar ${n} alteraç${n === 1 ? 'ão' : 'ões'}`;
+      const m = previaPrecos.filter(x => x.marcado), pl = (k, a, b) => `<b>${k}</b> ${k === 1 ? a : b}`;
+      const partes = [
+        [m.filter(x => x.novoPreco != null && Math.abs((x.p.preco ?? -1) - x.novoPreco) > 0.001).length, 'preço muda', 'preços mudam'],
+        [m.filter(x => x.novoEsg && !x.p.esgotado).length, 'produto esgota', 'produtos esgotam'],
+        [m.filter(x => !x.novoEsg && x.p.esgotado).length, 'volta ao estoque', 'voltam ao estoque'],
+        [previaNovos.filter(x => x.acao.startsWith('p')).length, 'código ligado a produto existente', 'códigos ligados a produtos existentes'],
+        [previaNovos.filter(x => x.acao === 'novo').length, 'produto novo (entra oculto)', 'produtos novos (entram ocultos)'],
+      ].filter(x => x[0]).map(x => pl(...x));
+      $('#resumoAplicar').innerHTML = partes.length ? 'Ao aplicar: ' + partes.join(' · ') + '. Nada vai ao ar antes de publicar.' : 'Nada marcado para aplicar.';
+    };
     contar();
     const bt = $('#todosNovos');
     if (bt) bt.onclick = () => { previaNovos.forEach(x => { if (!x.sugestoes.length) x.acao = 'novo'; }); $$('.sel-novo').forEach(s => { const x = previaNovos[+s.dataset.n]; s.value = x.acao; }); contar(); };
@@ -2817,6 +2830,7 @@ ${urlCatalogo()}`;
       : c.ultimo ? `Última pasta criada em ${c.ultimo}, com ${(c.arquivos || []).length} arquivos.`
       : c.ativo ? 'Ligado. A pasta é criada na próxima vez que você publicar.' : 'Desligado.';
     $('#paStatus').classList.toggle('erro-txt', !!c.erro);
+    if (E.produtos && !$('#aba-inicio').hidden) desenharInicio();
   }
   async function carregarPastaAtu() { try { mostrarPastaAtu(await api('pastaAtualizacao')); } catch (e) { /* servidor antigo */ } }
   $('#paSalvar').addEventListener('click', async () => {

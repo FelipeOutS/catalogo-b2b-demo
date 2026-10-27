@@ -157,6 +157,7 @@
       ${t.descPedidoValor ? `<div class="desc"><dt>Desconto no pedido (${fmtPct(P.descPedido)}%)</dt><dd>− ${brl(t.descPedidoValor)}</dd></div>` : ''}
       <div class="total"><dt>Total</dt><dd>${brl(t.total)}</dd></div>
       ${t.economia > 0 ? `<div class="eco">Cliente economiza ${brl(t.economia)} (${fmtPct(num2(t.economia / t.tabela * 100))}%)</div>` : ''}`;
+    $('#barraTotal').innerHTML = P.itens.length ? `<span>Total da proposta</span>${t.total < t.tabela ? `<s>${brl(t.tabela)}</s>` : ''}<b>${brl(t.total)}</b>` : '';
     $('.pct', $('.condicoes')).classList.toggle('ativo', !!P.descPedido);
     const c = P.cliente;
     $('#resumoCliente').textContent = c.empresa ? [c.empresa, c.cidade].filter(Boolean).join(' · ') : 'Preencha os dados do cliente';

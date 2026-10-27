@@ -1134,3 +1134,29 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 .mover-marca { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--linha); border-radius: var(--r, 8px); cursor: pointer; font-weight: 600; }
 .mover-marca:has(input:checked) { border-color: var(--laranja); background: var(--laranja-suave); }
 .mover-marca input { margin: 0; width: 16px; height: 16px; accent-color: var(--laranja); }
+
+/* ================= refino 27/10: estados do produto, prévia de preços, seleção e início =================
+   Esgotado ganha cor própria (cinza com ícone), separada da cor da marca e do vermelho de alerta. */
+:root { --esg-fundo: #e9eaec; --esg-texto: #3d4047; --cartao-fundo: #fff; }
+.s-esg, .chip.esg { background: var(--esg-fundo); color: var(--esg-texto); }
+.selo.s-esg svg { font-size: 12px; }
+.s-ok { display: inline-flex; align-items: center; gap: 6px; }
+.s-ok i { width: 6px; height: 6px; border-radius: 50%; background: var(--verde); }
+.tabela tr.esg .mini img { opacity: .5; filter: grayscale(1); }
+.tabela tr.esg .cod { color: var(--suave); }
+.tabela tr.sel td { background: var(--laranja-suave); }
+.tabela tr.sel .mini { background: var(--cartao-fundo); }
+.massa-acoes { align-items: center; }
+.massa-sep { flex: none; width: 1px; height: 20px; margin: 0 6px; background: rgba(255, 255, 255, .2); }
+.previa .var { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; background: var(--tile); font-variant-numeric: tabular-nums; vertical-align: 1px; }
+.previa .var.sobe { color: var(--vermelho); }
+.previa .var.desce { color: var(--verde); }
+.aplicar-barra { position: sticky; bottom: 0; z-index: 2; margin-top: 14px; padding: 12px 0 2px; background: var(--cartao-fundo); border-top: 1px solid var(--linha); }
+.resumo-aplicar { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: var(--suave); }
+.resumo-aplicar b { color: var(--texto, var(--tinta)); font-variant-numeric: tabular-nums; }
+.ini-tile.zero b { color: var(--suave); font-weight: 600; }
+.ini-tile.zero span { opacity: .85; }
+.ini-ult { margin: 6px 0 0; font-size: 12.5px; color: var(--suave); }
+/* o resumo do topo ocupa menos altura: os números cabem na primeira tela do notebook */
+.ini-hero { grid-template-columns: 112px minmax(0, 1fr) auto; padding-block: 12px; }
+.ini-capas { zoom: .74; }

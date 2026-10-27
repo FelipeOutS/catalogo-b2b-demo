@@ -290,3 +290,12 @@ dialog[open]::backdrop { background-color: rgba(15, 14, 14, .5); transition-dura
 .tag, .cat-sep, .itens th { text-transform: none; letter-spacing: 0; }
 .cat-sep { font-size: 13px; color: var(--tinta); }
 .itens th { font-size: 12.5px; }
+
+/* ================= refino 27/10: ações da proposta sempre à vista, com o total ================= */
+.acoes-prop { position: sticky; bottom: 0; z-index: 5; align-items: center; background: #fff; border-radius: 0 0 var(--raio, 16px) var(--raio, 16px); }
+.barra-total { margin: 0 auto 0 0; display: flex; align-items: baseline; gap: 10px; font-variant-numeric: tabular-nums; }
+.barra-total span { font-size: 13px; color: var(--suave); }
+.barra-total s { font-size: 13px; color: var(--suave); }
+.barra-total b { font-size: 20px; letter-spacing: -.01em; color: var(--tinta); }
+.barra-total:empty { display: none; }
+@media (max-width: 640px) { .barra-total { flex: 1 0 100%; } }
