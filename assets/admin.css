@@ -1176,3 +1176,10 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 .pdf-pag-cab { display: flex; align-items: center; gap: 14px; padding: 8px 14px 6px; border-top: 1px solid var(--linha); font-size: 13px; }
 .pdf-pag-cab b { margin-right: auto; }
 .pdf-pag-cats { max-height: 220px; overflow-y: auto; padding-bottom: 12px; }
+
+/* cores do produto no editor */
+.cores-ed { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.cor-op { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border: 1px solid var(--linha); border-radius: var(--r, 8px); font-size: 13.5px; cursor: pointer; }
+.cor-op input { width: 15px; height: 15px; accent-color: var(--laranja); flex: none; }
+.cor-op:has(input:checked) { border-color: var(--laranja); background: var(--laranja-suave); }
+.cor-q { display: inline-block; width: 16px; height: 16px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, .25); flex: none; }

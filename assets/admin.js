@@ -1871,6 +1871,13 @@
 
   // ================= editor de produto =================
   let edIdx = -1, edFotos = [], edSpecs = [];
+  // cores do produto: marcar e desmarcar
+  function desenharCoresEd(atuais) {
+    const tem = new Set(atuais || []);
+    $('#edCores').innerHTML = Object.entries(A.CORES).map(([k, c]) => `<label class="cor-op"><input type="checkbox" value="${k}" ${tem.has(k) ? 'checked' : ''}><i class="cor-q" data-hex="${c.hex}"></i><span>${esc(c.nome)}</span></label>`).join('');
+    $$('#edCores .cor-q').forEach(q => { q.style.background = q.dataset.hex; });
+  }
+  const lerCoresEd = () => A.coresValidas([...document.querySelectorAll('#edCores input:checked')].map(i => i.value));
   function abrirEditor(i, base) {
     edIdx = i;
     const p = base || (i >= 0 ? E.produtos[i] : { codigo: '', categoria: $('#fCat').value || '', nome: '', preco: null, promo: null, pcs: '', esgotado: false, ativo: true, destaque: false, specs: [], fotos: [] });
@@ -1898,6 +1905,7 @@
     $('#edFotoStatus').textContent = '';
     desenharFotosEd();
     desenharSpecsEd();
+    desenharCoresEd(p.cores);
     mostrarHistorico(i >= 0 ? p.codigo : '');
     $('#edSpecDica').hidden = true;
     if (i < 0 && !base) aplicarSpecsPadrao();
@@ -2065,6 +2073,8 @@
       esgotado: $('#eEsgotado').checked, ativo: $('#eAtivo').checked, destaque: $('#eDestaque').checked,
       specs: lerSpecs(), fotos: edFotos.slice(),
     };
+    p.cores = lerCoresEd();
+    if (!p.cores.length && !(antes && 'cores' in antes)) delete p.cores; // sem cor: não cria o campo à toa
     // o % só fica guardado se bate com o promocional (senão vale o % calculado dos dois preços)
     if (p.promo == null || p.descontoPct == null || promoPeloPct(p.preco, p.descontoPct) !== p.promo) p.descontoPct = pctDe(p.preco, p.promo);
     if (p.descontoPct == null) delete p.descontoPct;
@@ -2418,11 +2428,11 @@
     if (m) { const ano = m[3].length === 2 ? '20' + m[3] : m[3]; return ano + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0'); }
     return '';
   }
-  const COLS = ['CODIGO', 'CATEGORIA', 'NOME', 'PRECO', 'PRECO PROMO', 'DESCONTO %', 'PROMO INICIO', 'PROMO FIM', 'PCS/CX', 'ESGOTADO', 'ESTOQUE', 'ATIVO', 'DESTAQUE'];
+  const COLS = ['CODIGO', 'CATEGORIA', 'NOME', 'PRECO', 'PRECO PROMO', 'DESCONTO %', 'PROMO INICIO', 'PROMO FIM', 'PCS/CX', 'ESGOTADO', 'ESTOQUE', 'ATIVO', 'DESTAQUE', 'CORES'];
   function montarPlanilha(semPreco) {
       const cab = [...COLS, ...Array.from({ length: MAX_SPECS }, (_, k) => 'ESPEC ' + (k + 1)), ...Array.from({ length: MAX_FOTOS }, (_, k) => 'FOTO ' + (k + 1))];
       const linhas = E.produtos.map(p => [
-        p.codigo, p.categoria, p.nome, p.preco ?? '', p.promo ?? '', pctDoProduto(p) ?? '', dataBR(p.promoDe), dataBR(p.promoAte), p.pcs ?? '', p.esgotado ? 'SIM' : 'NÃO', p.estoque ?? '', p.ativo === false ? 'NÃO' : 'SIM', p.destaque ? 'SIM' : 'NÃO',
+        p.codigo, p.categoria, p.nome, p.preco ?? '', p.promo ?? '', pctDoProduto(p) ?? '', dataBR(p.promoDe), dataBR(p.promoAte), p.pcs ?? '', p.esgotado ? 'SIM' : 'NÃO', p.estoque ?? '', p.ativo === false ? 'NÃO' : 'SIM', p.destaque ? 'SIM' : 'NÃO', A.coresValidas(p.cores).map(k => A.CORES[k].nome).join(', '),
         ...Array.from({ length: MAX_SPECS }, (_, k) => (p.specs || [])[k] || ''), ...Array.from({ length: MAX_FOTOS }, (_, k) => (p.fotos || [])[k] || ''),
       ]);
       // "sem preços": tira as colunas de valor (se a planilha voltar, os preços do painel não mudam)
@@ -2483,6 +2493,8 @@
     if (v('PROMO FIM') !== undefined) o.promoAte = dataISO(v('PROMO FIM'));
     if (v('PCS/CX') !== undefined && String(v('PCS/CX')).trim() !== '') o.pcs = String(v('PCS/CX')).trim();
     ['ESGOTADO', 'ATIVO', 'DESTAQUE'].forEach(h => { const b = simNao(v(h)); if (b != null) o[h.toLowerCase()] = b; });
+    // cores: nomes separados por vírgula ("Preto, Cinza"); nomes desconhecidos são ignorados
+    if (v('CORES') !== undefined) o.cores = A.coresValidas(String(v('CORES')).split(/[,;/|]+/).map(A.corChave));
     if (v('ESTOQUE') !== undefined && String(v('ESTOQUE')).trim() !== '') { const n = parsePreco(v('ESTOQUE')); if (n != null) { o.esgotado = n <= 0; o.estoque = Math.round(n); } }
     const specs = []; let temSpec = false;
     for (let k = 1; k <= MAX_SPECS; k++) if (col('ESPEC ' + k) >= 0) { temSpec = true; const s = String(v('ESPEC ' + k)).trim(); if (s) specs.push(pt(s)); }
@@ -2969,7 +2981,7 @@ ${urlCatalogo()}`;
       if ((un(a) ?? -1) !== (un(p) ?? -1)) d.precos.push({ p, de: un(a), para: un(p) });
       if (!a.esgotado && p.esgotado) d.esgotaram.push(p);
       if (a.esgotado && !p.esgotado) d.voltaram.push(p);
-      const resto = x => JSON.stringify([x.nome, x.categoria, x.pcs, x.specs, x.fotos, x.destaque, x.preco, x.promo]);
+      const resto = x => JSON.stringify([x.nome, x.categoria, x.pcs, x.specs, x.fotos, x.destaque, x.preco, x.promo, x.cores || []]);
       if (resto(a) !== resto(p) && !d.precos.some(x => x.p === p)) d.outros.push(p);
     });
     const codAtuais = new Set(atuais.map(p => norm(p.codigo)));

@@ -182,7 +182,7 @@
       saida.push({
         id, codigo: String(p.codigo), categoria: bonitoCat(p.categoria) || 'Outros',
         nome: bonito(p.nome || ''), preco, promo, precoFinal: promo != null ? promo : preco,
-        pcsTxt, pcs, esgotado: !!p.esgotado, anonimo: !!p.anonimo, destaque: !!p.destaque, specs, fotos, ordem: i, novidade: p.novidade || null, novaLinha: !!p.novaLinha, vazioAntes: Math.max(0, parseInt(p.vazioAntes, 10) || 0),
+        pcsTxt, pcs, esgotado: !!p.esgotado, anonimo: !!p.anonimo, destaque: !!p.destaque, cores: coresValidas(p.cores), specs, fotos, ordem: i, novidade: p.novidade || null, novaLinha: !!p.novaLinha, vazioAntes: Math.max(0, parseInt(p.vazioAntes, 10) || 0),
         // últimas unidades: vem pronto da publicação (o número do estoque não é publicado)
         poucas: !p.esgotado && (p.poucas === true || (typeof p.estoque === 'number' && p.estoque > 0 && p.estoque <= pcs * 2)),
       });
@@ -230,5 +230,17 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  window.Aiker = { miniUrl, medioUrl, hojeISO, promoNoPrazo, carregarTudo, montarProdutos, toObjects, sim, nao, brl, esc, slug, norm, bonito, parsePreco, parseCSV, fotoUrl, CFG };
+  // cores do produto: quadradinhos no cartão da tabela e no catálogo, na ordem desta lista
+  const CORES = {
+    preto: { nome: 'Preto', hex: '#111111' }, cinza: { nome: 'Cinza', hex: '#a3afb8' }, branco: { nome: 'Branco', hex: '#ffffff' },
+    vermelho: { nome: 'Vermelho', hex: '#e3241b' }, prata: { nome: 'Prata', hex: '#cdd2d7' }, grafite: { nome: 'Grafite', hex: '#4b5057' },
+    azul: { nome: 'Azul', hex: '#1f5bd7' }, 'azul-claro': { nome: 'Azul-claro', hex: '#5ab4e5' }, verde: { nome: 'Verde', hex: '#2e9e4f' },
+    amarelo: { nome: 'Amarelo', hex: '#f5c400' }, laranja: { nome: 'Laranja', hex: '#f27a1a' }, rosa: { nome: 'Rosa', hex: '#ec6fa6' },
+    roxo: { nome: 'Roxo', hex: '#7b4bb7' }, marrom: { nome: 'Marrom', hex: '#7a4b2a' }, bege: { nome: 'Bege', hex: '#dcc9a8' }, dourado: { nome: 'Dourado', hex: '#c9a227' },
+  };
+  const coresValidas = l => Object.keys(CORES).filter(k => (Array.isArray(l) ? l : []).includes(k));
+  // "Azul claro", "AZUL-CLARO", "azul" → chave da lista (nome desconhecido fica de fora)
+  const corChave = s => { const n = String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, '-'); return CORES[n] ? n : (Object.keys(CORES).find(k => CORES[k].nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-') === n) || ''); };
+
+  window.Aiker = { CORES, coresValidas, corChave, miniUrl, medioUrl, hojeISO, promoNoPrazo, carregarTudo, montarProdutos, toObjects, sim, nao, brl, esc, slug, norm, bonito, parsePreco, parseCSV, fotoUrl, CFG };
 })();

@@ -20,6 +20,11 @@
     if (/^fotos\/[^/]+$/.test(u)) return u.replace(/^fotos\//, 'fotos/pdf/');
     return u;
   }
+  // cores do produto: quadradinhos empilhados no canto direito da foto, como no PDF original
+  function coresHtml(p) {
+    const C = window.Aiker.CORES;
+    return p.cores && p.cores.length ? `<span class="d-cores">${p.cores.map(k => `<i title="${esc(C[k].nome)}" data-hex="${C[k].hex}"></i>`).join('')}</span>` : '';
+  }
   function card(p) {
     // esgotado: mantém o espaço, mas sem nada que identifique o produto
     if (p.esgotado && !dados.config.esgotadoTransparente) return `<div class="d-c d-anon"><div class="d-anon-in">
@@ -39,7 +44,7 @@
       : `<div>${o ? `<span class="d-de">${num(p.preco)}</span>` : nv && nv.de ? `<span class="d-de">${num(nv.de)}</span>` : ''}<span class="d-valor">${num(p.precoFinal)}<small>/un.</small></span></div>`;
     const caixa = `<div class="d-cx">PCS/CX: <b>${esc(p.pcsTxt || pcsN(p))}</b></div>`;
     return `<div class="d-c ${p.esgotado ? 'esg' : ''}${p.esgotado && cfg.esgotadoTransparente ? ' esg-transp' : ''}">
-      <div class="d-img">${p.fotos[0] ? `<img src="${esc(fotoPdf(p.fotos[0]))}" data-orig="${esc(p.fotos[0])}" onerror="if(this.dataset.orig&&this.src.indexOf(this.dataset.orig)<0)this.src=this.dataset.orig" alt="">` : ''}<span class="d-cod">${esc(p.codigo)}</span>${o && !p.esgotado ? `<span class="d-off">−${o}%</span>` : ''}${p.esgotado ? '<span class="d-esg">ESGOTADO</span>' : ''}${nv ? `<span class="d-nov d-nov-${esc(nv.tipo)}">${esc(nv.txt)}</span>` : ''}</div>
+      <div class="d-img">${coresHtml(p)}${p.fotos[0] ? `<img src="${esc(fotoPdf(p.fotos[0]))}" data-orig="${esc(p.fotos[0])}" onerror="if(this.dataset.orig&&this.src.indexOf(this.dataset.orig)<0)this.src=this.dataset.orig" alt="">` : ''}<span class="d-cod">${esc(p.codigo)}</span>${o && !p.esgotado ? `<span class="d-off">−${o}%</span>` : ''}${p.esgotado ? '<span class="d-esg">ESGOTADO</span>' : ''}${nv ? `<span class="d-nov d-nov-${esc(nv.tipo)}">${esc(nv.txt)}</span>` : ''}</div>
       <div class="d-corpo">
         <h3 class="d-nome">${esc(p.nome)}</h3>
         <ul class="d-specs">${specs}</ul>
@@ -163,6 +168,7 @@
     });
 
     document.getElementById('folhas').innerHTML = folhas.join('');
+    document.querySelectorAll('.d-cores i[data-hex]').forEach(i => { i.style.background = i.dataset.hex; });
     document.fonts.ready.then(alinharCartoes);
     document.title = `${nov ? 'Novidades' : 'Tabela'} Aiker ${hoje.replace(/\//g, '-')}`;
     ajustarZoom();

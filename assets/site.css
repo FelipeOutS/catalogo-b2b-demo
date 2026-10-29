@@ -639,3 +639,10 @@ dialog[open]::backdrop { background-color: rgba(15, 14, 14, .55); transition-dur
 /* refino 27/10: código longo não quebra no meio; no celular a situação desce para a linha de baixo */
 .produto-topo { flex-wrap: wrap; row-gap: 2px; }
 .produto-cod { white-space: nowrap; }
+
+/* cores do produto */
+.produto-cores { display: flex; gap: 5px; margin: 6px 0 2px; }
+.cor-q { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, .18); flex: none; }
+.cores-ficha { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.cores-ficha li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.cores-ficha .cor-q { width: 18px; height: 18px; }

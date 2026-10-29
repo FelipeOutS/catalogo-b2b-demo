@@ -1,5 +1,6 @@
 (function () {
   const { brl, esc, norm, slug } = window.Aiker;
+  const CORES_ = window.Aiker.CORES;
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
@@ -266,7 +267,7 @@
         <span class="ver">Ver detalhes</span>
       </button>
       <div class="produto-corpo">
-        <div class="produto-topo"><span class="produto-cod">${esc(p.codigo)}</span>${p.esgotado ? '<span class="estoque fora">Esgotado</span>' : '<span class="estoque"><i aria-hidden="true"></i>Em estoque</span>'}</div>
+        <div class="produto-topo"><span class="produto-cod">${esc(p.codigo)}</span>${p.esgotado ? '<span class="estoque fora">Esgotado</span>' : '<span class="estoque"><i aria-hidden="true"></i>Em estoque</span>'}</div>${p.cores && p.cores.length ? `<div class="produto-cores" aria-label="Cores: ${esc(p.cores.map(k => CORES_[k].nome).join(', '))}">${p.cores.map(k => `<i class="cor-q" title="${esc(CORES_[k].nome)}" data-hex="${CORES_[k].hex}"></i>`).join('')}</div>` : ''}
         <h4 class="produto-nome" data-abrir="${p.id}">${esc(p.nome)}</h4>
         ${specsCard(p)}
       </div>
@@ -577,6 +578,7 @@
           <div class="det-caixa"><span>Caixa com <b>${esc(p.pcsTxt || p.pcs)}</b> unidades</span>${p.precoFinal != null ? `<span><b>${valorCaixa(p)}</b> a caixa</span>` : ''}</div>
           <div class="det-acao">${acaoHtml(p)}</div>
         </div>
+        ${p.cores && p.cores.length ? `<div class="ficha"><p class="ficha-tit">Cores</p><ul class="cores-ficha">${p.cores.map(k => `<li><i class="cor-q" data-hex="${CORES_[k].hex}"></i>${esc(CORES_[k].nome)}</li>`).join('')}</ul></div>` : ''}
         ${p.specs.length ? `<div class="ficha"><p class="ficha-tit">Especificações</p><dl>${p.specs.map(s => `<div><dt>${esc(s.rotulo || 'Detalhe')}</dt><dd>${esc(s.valor)}</dd></div>`).join('')}</dl></div>` : ''}
         <p class="det-nota">Imagens meramente ilustrativas. Dúvidas sobre especificações e funcionalidades? Fale com o seu vendedor.</p>
       </div>
@@ -626,3 +628,6 @@
     tAviso = setTimeout(() => a.classList.remove('on'), 2400);
   }
 })();
+
+// pinta os quadradinhos de cor (o HTML só leva a cor em data-hex)
+new MutationObserver(() => document.querySelectorAll('.cor-q[data-hex]').forEach(q => { q.style.background = q.dataset.hex; q.removeAttribute('data-hex'); })).observe(document.documentElement, { childList: true, subtree: true });

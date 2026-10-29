@@ -199,3 +199,10 @@ body { background: #5b5352; font-family: var(--sans); color: #231c1b; }
 .d-c.esg-transp .d-img > :not(.d-esg), .d-c.esg-transp .d-corpo { opacity: .35; }
 .d-c.esg-transp .d-img img { filter: none; }
 .d-c.esg-transp .d-esg { z-index: 2; }
+
+/* cores do produto (medidas do PDF original): quadrados de 4,6 mm com contorno na cor da marca, empilhados no canto direito */
+.d-cores { position: absolute; right: 2.4mm; top: 2.4mm; z-index: 1; display: flex; flex-direction: column; gap: 1.3mm; }
+.d-cores i { display: block; width: 4.6mm; height: 4.6mm; border-radius: .8mm; border: .3mm solid #f16130; }
+.d-img:has(.d-cores):not(:has(.d-apps)) > img { left: 9mm; width: calc(100% - 18mm); }
+/* com selo de aplicativo no canto de cima, as cores descem para o canto de baixo */
+.d-img:has(.d-apps) .d-cores { top: auto; bottom: 2mm; }
