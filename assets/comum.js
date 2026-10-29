@@ -201,6 +201,7 @@
       capaPdf: fotoUrl(c.capaPdf || 'img/capa.webp'),
       capaNovidadesPdf: fotoUrl(c.capaNovidadesPdf),
       descontoGeral: Math.min(99, Math.max(0, Number(c.descontoGeral) || 0)), semPreco: !!c.semPreco, esgotadoTransparente: !!c.esgotadoTransparente,
+      paginas: c.paginas && typeof c.paginas === 'object' ? { promo: c.paginas.promo !== false, capa: c.paginas.capa !== false, indice: c.paginas.indice !== false, semCats: (Array.isArray(c.paginas.semCats) ? c.paginas.semCats : []).map(bonitoCat) } : null,
       heroImg: fotoUrl(c.heroImg || 'img/hero.webp'),
       heroTitulo: c.heroTitulo || '', heroTexto: c.heroTexto || '',
       pdfPromo: c.pdfPromo !== false && c.pdfPromo !== 'NÃO', pdfEsgotados: c.pdfEsgotados !== false && c.pdfEsgotados !== 'NÃO',

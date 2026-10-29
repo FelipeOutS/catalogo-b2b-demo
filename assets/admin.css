@@ -1160,3 +1160,19 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 /* o resumo do topo ocupa menos altura: os números cabem na primeira tela do notebook */
 .ini-hero { grid-template-columns: 112px minmax(0, 1fr) auto; padding-block: 12px; }
 .ini-capas { zoom: .74; }
+
+/* ================= Gerar PDF: escolher as páginas ================= */
+.pdf-paginas { margin: 4px 0 14px; border: 1px solid var(--linha); border-radius: var(--r, 10px); }
+.pdf-paginas summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; cursor: pointer; font-weight: 600; font-size: 14px; list-style: none; }
+.pdf-paginas summary::-webkit-details-marker { display: none; }
+.pdf-paginas summary::after { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin-left: 4px; transition: transform .15s; }
+.pdf-paginas[open] summary::after { transform: rotate(225deg); }
+.pdf-paginas summary span { margin-right: auto; }
+.pdf-paginas summary em { font-style: normal; font-weight: 500; font-size: 13px; color: var(--suave); text-align: right; }
+.pdf-pag-fixas, .pdf-pag-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 14px; padding: 0 14px 10px; }
+.pdf-pag-fixas label, .pdf-pag-cats label { display: flex; align-items: center; gap: 8px; min-height: 30px; font-size: 13.5px; cursor: pointer; }
+.pdf-pag-fixas input, .pdf-pag-cats input { width: 16px; height: 16px; accent-color: var(--laranja); flex: none; }
+.pdf-pag-cats small { margin-left: auto; color: var(--suave); font-variant-numeric: tabular-nums; }
+.pdf-pag-cab { display: flex; align-items: center; gap: 14px; padding: 8px 14px 6px; border-top: 1px solid var(--linha); font-size: 13px; }
+.pdf-pag-cab b { margin-right: auto; }
+.pdf-pag-cats { max-height: 220px; overflow-y: auto; padding-bottom: 12px; }

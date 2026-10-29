@@ -94,25 +94,29 @@
     const folhas = [];
 
     const nov = dados.config.modoNovidades;
+    // páginas escolhidas no Gerar PDF (sem escolha = todas)
+    const pgs = (!nov && dados.config.paginas) || {};
+    const semCats = new Set(pgs.semCats || []);
+    const ind = !nov && pgs.indice !== false;
     if (nov) {
       const tipos = {}; dados.produtos.forEach(p => { if (p.novidade) tipos[p.novidade.tipo] = (tipos[p.novidade.tipo] || 0) + 1; });
       const rot = { baixou: 'com preço menor', preco: 'com preço atualizado', voltou: 'de volta ao estoque', novo: 'novos' };
       if (dados.config.capaNovidadesPdf) folhas.push(`<section class="folha folha-img"><img src="${esc(dados.config.capaNovidadesPdf)}" alt="Novidades"></section>`);
       else folhas.push(`<section class="folha nov-capa"><img src="img/logo-laranja.png" alt="aiker"><p class="nov-sobre">Tabela de</p><h1>Novidades</h1><p class="nov-desde">O que mudou desde ${esc(dados.config.novidadesDesde)} · atualizada em ${hoje}</p><ul>${Object.keys(rot).filter(k => tipos[k]).map(k => `<li><b>${tipos[k]}</b>${rot[k]}</li>`).join('')}</ul><footer>Preços e estoque sujeitos a alteração. Consulte seu vendedor.</footer></section>`);
     }
-    if (!nov && comPromo && dados.config.promo && dados.config.capaPromoPdf) {
+    if (!nov && pgs.promo !== false && comPromo && dados.config.promo && dados.config.capaPromoPdf) {
       folhas.push(`<section class="folha folha-img"><img src="${esc(dados.config.capaPromoPdf)}" alt="Promoção"></section>`);
     }
-    if (!nov) folhas.push(`<section class="folha folha-img"><img src="${esc(dados.config.capaPdf || 'img/capa.webp')}" alt="Aiker - Tecnologia automotiva"></section>`);
+    if (!nov && pgs.capa !== false) folhas.push(`<section class="folha folha-img"><img src="${esc(dados.config.capaPdf || 'img/capa.webp')}" alt="Aiker - Tecnologia automotiva"></section>`);
 
-    const lista = dados.produtos.filter(p => comEsg || !p.esgotado);
+    const lista = dados.produtos.filter(p => (comEsg || !p.esgotado) && !semCats.has(p.categoria));
     const grupos = {};
     lista.forEach(p => (grupos[p.categoria] = grupos[p.categoria] || []).push(p));
     const cats = dados.categorias.filter(c => grupos[c]);
 
     // índice visual: foto, quantidade e página de cada categoria
     const POR = POR_PAGINA;
-    let pag = folhas.length + 2; // página do índice + 1
+    let pag = folhas.length + (ind ? 2 : 1); // página do índice (se houver) + 1
     const inicio = {};
     // casas em branco definidas em Organizar tabela (vazioAntes; novaLinha é o formato antigo)
     const casas = c => { const l = []; grupos[c].forEach(p => { if (!nov && p.novaLinha && l.length % 3) while (l.length % 3) l.push(null); if (!nov) for (let k = 0; k < (p.vazioAntes || 0); k++) l.push(null); l.push(p); }); return l; };
@@ -124,7 +128,7 @@
     };
     const linhas = Math.ceil(cats.length / 2);
     const ICO_TOQUE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11.2V5.5a2 2 0 1 1 4 0v4.3l4.4.9a2.5 2.5 0 0 1 2 2.8l-.8 5.4A3 3 0 0 1 15.6 21H11a3 3 0 0 1-2.4-1.2l-3.4-4.6a1.8 1.8 0 0 1 2.7-2.4L9 13.9V11.2z"/></svg>';
-    if (!nov) folhas.push(`<section class="folha indice" id="categorias">
+    if (ind) folhas.push(`<section class="folha indice" id="categorias">
       <header class="ind-cab">
         <div>
           <img class="ind-logo" src="img/logo-laranja.png" alt="aiker">
@@ -152,7 +156,7 @@
           <header class="cab"><h2>${nov ? '<small>Novidades</small>' : ''}${esc(c)}</h2><img src="img/logo-escuro.png" alt="aiker"></header>
           <div class="grade">${itens.slice(i, i + POR_PAGINA).map(p => (p ? card(p) : '<div class="d-c d-vazio" aria-hidden="true"></div>')).join('')}</div>
           <span class="data">Atualizado em ${hoje}</span>
-          ${nov ? '' : '<a class="voltar" href="#categorias">VOLTAR AO INÍCIO</a>'}
+          ${!ind ? '' : '<a class="voltar" href="#categorias">VOLTAR AO INÍCIO</a>'}
           <div class="pe"></div>
         </section>`);
       }

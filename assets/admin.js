@@ -182,6 +182,11 @@
     const nov = calcularNovidades(base);
     const conta = t => nov.filter(x => x.novidade.tipo === t).length;
     const partes = [['baixou', 'preço baixou'], ['preco', 'preço atualizado'], ['voltou', 'voltaram ao estoque'], ['novo', 'novos']].filter(([t]) => conta(t)).map(([t, n]) => `${conta(t)} ${n}`);
+    // páginas que podem entrar no PDF: capa da promoção (se estiver ligada), capa, índice e cada categoria com produto visível
+    const ativosPdf = E.produtos.filter(p => p.codigo && p.ativo !== false);
+    const usadasPdf = new Set(ativosPdf.map(p => p.categoria));
+    const catsPdf = [...new Set([...(E.config.categorias || []), ...ativosPdf.map(p => p.categoria)])].filter(c => usadasPdf.has(c));
+    const temPromoPdf = !!(E.config.promoAtiva && E.config.pdfPromo !== false && E.config.capaPromoPdf);
     m.innerHTML = `<h2>Gerar PDF</h2>
       <p>Usa as alterações atuais do painel, mesmo antes de publicar.</p>
       <div class="pdf-ajustes">
@@ -190,6 +195,16 @@
         <label class="troca"><input type="checkbox" id="pdfEsgTransp"><span class="trilho"></span> Esgotados transparentes</label>
       </div>
       <p class="dica" style="margin-top:-4px">Valem só para este PDF: o desconto aparece com o preço antigo riscado; sem preços, sai "Consulte seu vendedor". Com <b>esgotados transparentes</b>, o produto esgotado aparece apagado, com foto, nome e código, e o selo Esgotado por cima (na tabela normal ele sai sem nenhum dado). O catálogo não muda.</p>
+      <details class="pdf-paginas">
+        <summary><span>Páginas da tabela completa</span><em id="pdfPagResumo">Todas</em></summary>
+        <div class="pdf-pag-fixas">
+          ${temPromoPdf ? '<label><input type="checkbox" data-pag="promo" checked> Capa da promoção</label>' : ''}
+          <label><input type="checkbox" data-pag="capa" checked> Capa</label>
+          <label><input type="checkbox" data-pag="indice" checked> Índice de categorias</label>
+        </div>
+        <div class="pdf-pag-cab"><b>Categorias</b><button type="button" class="btn-texto" data-cats="1">Marcar todas</button><button type="button" class="btn-texto" data-cats="0">Desmarcar todas</button></div>
+        <div class="pdf-pag-cats">${catsPdf.map((c, i) => `<label><input type="checkbox" data-cat="${i}" checked> ${esc(c)} <small>${ativosPdf.filter(p => p.categoria === c).length}</small></label>`).join('')}</div>
+      </details>
       <div class="pdf-opcoes">
         <button type="button" class="pdf-op" data-t="completa"><b>Tabela completa</b><span>Todos os produtos, com capa e índice de categorias.</span></button>
         <button type="button" class="pdf-op" data-t="novidades" ${nov.length ? '' : 'disabled'}><b>Tabela de novidades · ${nov.length} produto${nov.length === 1 ? '' : 's'}</b>
@@ -203,11 +218,23 @@
     const ajustes = () => {
       const d = parsePreco($('#pdfDesc', m).value);
       if (d != null && (d < 0 || d >= 100)) { toast('O desconto precisa ficar entre 1 e 99%.', true); return null; }
-      return { descontoGeral: d || 0, semPreco: !$('#pdfPreco', m).checked, esgotadoTransparente: $('#pdfEsgTransp', m).checked };
+      const pg = k => { const c = $(`[data-pag="${k}"]`, m); return !c || c.checked; };
+      const semCats = catsPdf.filter((c, i) => !$(`[data-cat="${i}"]`, m).checked);
+      const paginas = { promo: pg('promo'), capa: pg('capa'), indice: pg('indice'), semCats };
+      return { descontoGeral: d || 0, semPreco: !$('#pdfPreco', m).checked, esgotadoTransparente: $('#pdfEsgTransp', m).checked, paginas, nenhumaCat: semCats.length === catsPdf.length };
     };
     $('#pdfPreco', m).addEventListener('change', e => { $('#pdfDesc', m).disabled = !e.target.checked; });
-    $('[data-t="completa"]', m).onclick = () => { const a = ajustes(); if (!a) return; m.close(); abrirTabela(E.produtos, a); };
-    $('[data-t="novidades"]', m).onclick = () => { const a = ajustes(); if (!a) return; m.close(); abrirTabela(nov, { modoNovidades: true, novidadesDesde: base.data, ...a }); };
+    // resumo das páginas escolhidas ("Todas" quando nada foi desmarcado)
+    const resumoPag = () => {
+      const fora = [...$$('[data-pag]', m)].filter(c => !c.checked).map(c => c.parentElement.textContent.trim().toLowerCase());
+      const nc = $$('[data-cat]', m).filter(c => !c.checked).length;
+      if (nc) fora.push(nc === catsPdf.length ? 'todas as categorias' : `${nc} categoria${nc === 1 ? '' : 's'}`);
+      $('#pdfPagResumo', m).textContent = fora.length ? 'Sem ' + fora.join(', ') : 'Todas';
+    };
+    $('.pdf-paginas', m).addEventListener('change', resumoPag);
+    $$('[data-cats]', m).forEach(b => { b.onclick = () => { $$('[data-cat]', m).forEach(c => { c.checked = b.dataset.cats === '1'; }); resumoPag(); }; });
+    $('[data-t="completa"]', m).onclick = () => { const a = ajustes(); if (!a) return; if (a.nenhumaCat) { toast('Marque pelo menos uma categoria para a tabela.', true); return; } delete a.nenhumaCat; m.close(); abrirTabela(E.produtos, a); };
+    $('[data-t="novidades"]', m).onclick = () => { const a = ajustes(); if (!a) return; m.close(); delete a.nenhumaCat; abrirTabela(nov, { modoNovidades: true, novidadesDesde: base.data, ...a, paginas: null }); };
     $('[data-z]', m).onclick = () => {
       if (!confirm('Zerar as novidades? A próxima tabela de novidades vai comparar com a tabela de hoje.')) return;
       E.config.novidadesBase = fotografar(E.produtos);
