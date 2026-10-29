@@ -187,8 +187,9 @@
       <div class="pdf-ajustes">
         <label class="campo">Desconto em todos os produtos (%)<input id="pdfDesc" inputmode="decimal" placeholder="Ex.: 10 · vazio = sem desconto"></label>
         <label class="troca"><input type="checkbox" id="pdfPreco" checked><span class="trilho"></span> Mostrar preços</label>
+        <label class="troca"><input type="checkbox" id="pdfEsgTransp"><span class="trilho"></span> Esgotados transparentes</label>
       </div>
-      <p class="dica" style="margin-top:-4px">Valem só para este PDF: o desconto aparece com o preço antigo riscado; sem preços, sai "Consulte seu vendedor". O catálogo não muda.</p>
+      <p class="dica" style="margin-top:-4px">Valem só para este PDF: o desconto aparece com o preço antigo riscado; sem preços, sai "Consulte seu vendedor". Com <b>esgotados transparentes</b>, o produto esgotado aparece apagado, com foto, nome e código, e o selo Esgotado por cima (na tabela normal ele sai sem nenhum dado). O catálogo não muda.</p>
       <div class="pdf-opcoes">
         <button type="button" class="pdf-op" data-t="completa"><b>Tabela completa</b><span>Todos os produtos, com capa e índice de categorias.</span></button>
         <button type="button" class="pdf-op" data-t="novidades" ${nov.length ? '' : 'disabled'}><b>Tabela de novidades · ${nov.length} produto${nov.length === 1 ? '' : 's'}</b>
@@ -202,7 +203,7 @@
     const ajustes = () => {
       const d = parsePreco($('#pdfDesc', m).value);
       if (d != null && (d < 0 || d >= 100)) { toast('O desconto precisa ficar entre 1 e 99%.', true); return null; }
-      return { descontoGeral: d || 0, semPreco: !$('#pdfPreco', m).checked };
+      return { descontoGeral: d || 0, semPreco: !$('#pdfPreco', m).checked, esgotadoTransparente: $('#pdfEsgTransp', m).checked };
     };
     $('#pdfPreco', m).addEventListener('change', e => { $('#pdfDesc', m).disabled = !e.target.checked; });
     $('[data-t="completa"]', m).onclick = () => { const a = ajustes(); if (!a) return; m.close(); abrirTabela(E.produtos, a); };

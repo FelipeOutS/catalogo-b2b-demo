@@ -194,3 +194,8 @@ body { background: #5b5352; font-family: var(--sans); color: #231c1b; }
 /* o rodapé (preço e PCS/CX) fica preso no fim do cartão: o preço também alinha na linha */
 .d-corpo { flex: 1 1 auto; }
 .d-pe { margin-top: auto; }
+
+/* esgotado transparente (opção "Esgotados transparentes" do Gerar PDF): o produto aparece apagado; o selo Esgotado da marca fica por cima, forte */
+.d-c.esg-transp .d-img > :not(.d-esg), .d-c.esg-transp .d-corpo { opacity: .35; }
+.d-c.esg-transp .d-img img { filter: none; }
+.d-c.esg-transp .d-esg { z-index: 2; }

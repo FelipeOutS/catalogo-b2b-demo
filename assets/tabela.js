@@ -22,7 +22,7 @@
   }
   function card(p) {
     // esgotado: mantém o espaço, mas sem nada que identifique o produto
-    if (p.esgotado) return `<div class="d-c d-anon"><div class="d-anon-in">
+    if (p.esgotado && !dados.config.esgotadoTransparente) return `<div class="d-c d-anon"><div class="d-anon-in">
       <img src="img/icone.png" alt="" class="d-anon-marca">
       <span class="d-anon-tag">Esgotado</span>
       <small>Reposição: consulte seu vendedor</small></div></div>`;
@@ -38,7 +38,7 @@
       ? '<div><span class="d-valor">Consulte</span></div>'
       : `<div>${o ? `<span class="d-de">${num(p.preco)}</span>` : nv && nv.de ? `<span class="d-de">${num(nv.de)}</span>` : ''}<span class="d-valor">${num(p.precoFinal)}<small>/un.</small></span></div>`;
     const caixa = `<div class="d-cx">PCS/CX: <b>${esc(p.pcsTxt || pcsN(p))}</b></div>`;
-    return `<div class="d-c ${p.esgotado ? 'esg' : ''}">
+    return `<div class="d-c ${p.esgotado ? 'esg' : ''}${p.esgotado && cfg.esgotadoTransparente ? ' esg-transp' : ''}">
       <div class="d-img">${p.fotos[0] ? `<img src="${esc(fotoPdf(p.fotos[0]))}" data-orig="${esc(p.fotos[0])}" onerror="if(this.dataset.orig&&this.src.indexOf(this.dataset.orig)<0)this.src=this.dataset.orig" alt="">` : ''}<span class="d-cod">${esc(p.codigo)}</span>${o && !p.esgotado ? `<span class="d-off">−${o}%</span>` : ''}${p.esgotado ? '<span class="d-esg">ESGOTADO</span>' : ''}${nv ? `<span class="d-nov d-nov-${esc(nv.tipo)}">${esc(nv.txt)}</span>` : ''}</div>
       <div class="d-corpo">
         <h3 class="d-nome">${esc(p.nome)}</h3>
@@ -89,7 +89,7 @@
     const q = new URLSearchParams(location.search);
     const op = (k, cfg) => (q.has(k) ? q.get(k) !== '0' : cfg !== false);
     const comPromo = op('promo', dados.config.pdfPromo);
-    const comEsg = op('esgotados', dados.config.pdfEsgotados);
+    const comEsg = op('esgotados', dados.config.pdfEsgotados) || !!dados.config.esgotadoTransparente; // transparentes: o admin pediu para mostrar
     document.getElementById('painelInfo').textContent = (dados.config.modoNovidades ? 'Tabela de novidades' : 'Tabela de produtos') + ' · atualizada em ' + (dados.config.atualizadoEm || hoje).split(' ')[0];
     const folhas = [];
 

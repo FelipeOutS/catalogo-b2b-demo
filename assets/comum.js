@@ -157,12 +157,13 @@
   function hojeISO() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   // promoção vale hoje? (sem datas = vale sempre)
   function promoNoPrazo(de, ate) { const h = hojeISO(); return (!de || h >= de) && (!ate || h <= ate); }
-  function montarProdutos(lista) {
+  // manterEsg: só na prévia do admin com "Esgotados transparentes"; no catálogo o esgotado é sempre anônimo
+  function montarProdutos(lista, manterEsg) {
     const saida = [];
     const vistos = {};
     (lista || []).forEach((p, i) => {
       if (!p || !p.codigo || p.ativo === false) return;
-      if (p.esgotado) p = { codigo: 'ESG-' + i, categoria: p.categoria, nome: '', esgotado: true, anonimo: true, specs: [], fotos: [] };
+      if (p.esgotado && !manterEsg) p = { codigo: 'ESG-' + i, categoria: p.categoria, nome: '', esgotado: true, anonimo: true, specs: [], fotos: [] };
       const preco = typeof p.preco === 'number' ? p.preco : parsePreco(p.preco);
       let promo = typeof p.promo === 'number' ? p.promo : parsePreco(p.promo);
       if (promo != null && preco != null && promo >= preco) promo = null;
@@ -199,7 +200,7 @@
       capaPromoPdf: fotoUrl(c.capaPromoPdf),
       capaPdf: fotoUrl(c.capaPdf || 'img/capa.webp'),
       capaNovidadesPdf: fotoUrl(c.capaNovidadesPdf),
-      descontoGeral: Math.min(99, Math.max(0, Number(c.descontoGeral) || 0)), semPreco: !!c.semPreco,
+      descontoGeral: Math.min(99, Math.max(0, Number(c.descontoGeral) || 0)), semPreco: !!c.semPreco, esgotadoTransparente: !!c.esgotadoTransparente,
       heroImg: fotoUrl(c.heroImg || 'img/hero.webp'),
       heroTitulo: c.heroTitulo || '', heroTexto: c.heroTexto || '',
       pdfPromo: c.pdfPromo !== false && c.pdfPromo !== 'NÃO', pdfEsgotados: c.pdfEsgotados !== false && c.pdfEsgotados !== 'NÃO',
@@ -211,7 +212,7 @@
 
   async function carregarTudo() {
     const { dados, origem } = await buscarCatalogo();
-    const produtos = montarProdutos(dados.produtos);
+    const produtos = montarProdutos(dados.produtos, origem === 'previa' && !!(dados.config || {}).esgotadoTransparente);
     const config = montarConfig(dados.config, dados.vendedores, dados.publicadoEm);
     // ordem definida no admin (config.categorias); categorias sem produto não aparecem
     const usadas = new Set(produtos.map(p => p.categoria));
